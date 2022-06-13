@@ -1,0 +1,26 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+		  "type": "npm",
+		  "script": "start",
+		  "isBackground": true,
+		  "options": {
+			"cwd": "${workspaceFolder}/Frontend/CentFlow/"
+		  },
+		  "problemMatcher": {
+			"owner": "typescript",
+			"pattern": "$tsc",
+			"background": {
+			  "activeOnStart": true,
+			  "beginsPattern": {
+				"regexp": "(.*?)"
+			  },
+			  "endsPattern": {
+				"regexp": "bundle generation complete"
+			  }
+			}
+		  }
+		}
+	]
+}

@@ -59,7 +59,7 @@ export class AppComponent implements OnInit {
 
     this.map.on('zoomend', updateOnZoom);
     this.map.on('moveend', updateOnPan);
-
+    console.log(that.map.latLngToLayerPoint(L.latLng(fakeData[5].lat, fakeData[5].lon)));
     console.log(that.map.latLngToLayerPoint(L.latLng(fakeData[6].lat, fakeData[6].lon)));
     console.log(that.map.latLngToLayerPoint(L.latLng(fakeData[7].lat, fakeData[7].lon)));
     console.log(that.map.latLngToLayerPoint(L.latLng(fakeData[8].lat, fakeData[8].lon)));
@@ -79,8 +79,6 @@ export class AppComponent implements OnInit {
     const path = d3.geoPath().projection(transform);
 
     function updateOnZoom() {
-      // const ctx = that.aS.getContext();
-      // console.log(canvas);
       draw(fakeData);
       dots.attr("cx", d => that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
         .attr("cy", d => that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
@@ -115,8 +113,6 @@ export class AppComponent implements OnInit {
             points = findPoints(traj[i].tfh, valExt, cP, pP, nP);
           }
 
-
-
           if (i < traj.length - 1) {
             context.lineWidth = 3;
             context.strokeStyle = 'black'
@@ -135,6 +131,7 @@ export class AppComponent implements OnInit {
           context.lineTo(points[0].x, points[0].y);
           context.closePath();
           context.stroke();
+
           // // second line
           context.lineWidth = 3;
           context.strokeStyle = 'red'
@@ -157,6 +154,7 @@ export class AppComponent implements OnInit {
       const widthScale = d3.scaleLinear().domain([0, ext[1]]).range([0, that.maxTrajWidth]);
 
       if (p1 != undefined && p3 != undefined) {
+        // ============== Orthogonal Midpoint ===================+
         // Determining the midpoints
         const mP1 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 },
           mP2 = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
@@ -169,18 +167,42 @@ export class AppComponent implements OnInit {
         const iP = { x: p2.x + j, y: p2.y + j * ((pS1 + pS2) / 2) };
         // determining intersecting slope
         const iS = (p2.y - iP.y) / (p2.x - iP.x);
+        // ============== Orthogonal Midpoint ===================+
+
+        // ================ Using Triangle Incenter ==============
+        // // determining the distance of all points
+        // const a1 = p1.x - p2.x,
+        //   b1 = p1.y - p2.y,
+        //   a2 = p2.x - p3.x,
+        //   b2 = p2.y - p3.y,
+        //   a3 = p3.x - p1.x,
+        //   b3 = p3.y - p1.y;
+        // const d1 = Math.sqrt(a1 * a1 + b1 * b1),
+        //   d2 = Math.sqrt(a2 * a2 + b2 * b2),
+        //   d3 = Math.sqrt(a3 * a3 + b3 * b3);
+
+        // // point of intersection
+        // const iP = {
+        //   x: (d1 * p1.x + d2 * p2.x + d3 * p3.x) / (d1 + d2 + d3),
+        //   y: (d1 * p1.y + d2 * p2.y + d3 * p3.y) / (d1 + d2 + d3)
+        // };
+        // // determining intersecting slope
+        // const iS = -1 / (p2.y - iP.y) / (p2.x - iP.x);
+        // ================ Using Triangle Incenter ==============
+
+
         // determining y-intercept
         // const iY = iP.y - iS * iP.x
 
         if (iS == 0) { // if the slope is horizontal
           console.log("Hello")
-          dP1.x = p2.x + widthScale(val);
-          dP2.x = p2.x - widthScale(val);
-          dP1.y = p2.y - widthScale(val);
-          dP2.y = p2.y + widthScale(val);
+          dP1.x = p2.x - widthScale(val);
+          dP2.x = p2.x + widthScale(val);
+          dP1.y = p2.y; // + widthScale(val)
+          dP2.y = p2.y; // - widthScale(val)
         } else if (!isFinite(iS)) { // if the slope is vertical
-          dP1.x = p2.x + widthScale(val);
-          dP2.x = p2.x - widthScale(val);
+          dP1.x = p2.x; // + widthScale(val)
+          dP2.x = p2.x; // - widthScale(val)
           dP1.y = p2.y - widthScale(val);
           dP2.y = p2.y + widthScale(val);
         } else {
