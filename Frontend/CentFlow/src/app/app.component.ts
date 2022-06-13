@@ -96,51 +96,113 @@ export class AppComponent implements OnInit {
       clusters.forEach((clust: any) => {
         const traj = data.filter((x: any) => x.cid === clust),
           valExt: any = d3.extent(traj, (d: any) => d.tfh);
+        let pointArray = [];
         // console.log(valExt);
         for (let i = 0; i < traj.length; i++) {
           let points = undefined, nP = L.point(0, 0), pP = L.point(0, 0);
           const cP = that.map.latLngToLayerPoint(L.latLng(traj[i].lat, traj[i].lon)); // Current point
 
-          if (i == 0) {
+          if (i == 0) { // First point
             nP = that.map.latLngToLayerPoint(L.latLng(traj[i + 1].lat, traj[i + 1].lon)); // Next point
             points = findPoints(traj[i].tfh, valExt, cP, undefined, nP);
-          } else if (i == traj.length - 1) {
+            pointArray.push(points);
+
+            context.lineWidth = 3;
+            context.strokeStyle = '#ffa800'
+            context.beginPath();
+            context.moveTo(points[0].x, points[0].y);
+            context.lineTo(points[1].x, points[1].y);
+            // context.closePath();
+            context.stroke();
+
+          } else if (i == traj.length - 1) { // Last point 
             pP = that.map.latLngToLayerPoint(L.latLng(traj[i - 1].lat, traj[i - 1].lon)); // Previous point
             points = findPoints(traj[i].tfh, valExt, cP, pP);
+            pointArray.push(points);
+
+            // first line
+            context.lineWidth = 3;
+            context.strokeStyle = '#ffa800';
+            // context.beginPath();
+            context.moveTo(pointArray[i-1][0].x, pointArray[i-1][0].y);
+            context.lineTo(points[0].x, points[0].y);
+            // context.closePath();
+            context.stroke();
+
+            // // second line
+            context.lineWidth = 3;
+            context.strokeStyle = '#ffa800';
+            context.lineWidth = 3;
+            // context.beginPath();
+            context.moveTo(pointArray[i-1][1].x, pointArray[i-1][1].y);
+            context.lineTo(points[1].x, points[1].y);
+            // context.closePath();
+            context.stroke();
+
+            // final line
+            context.lineWidth = 3;
+            context.strokeStyle = '#ffa800';
+            // context.beginPath();
+            context.moveTo(points[0].x, points[0].y);
+            context.lineTo(points[1].x, points[1].y);
+            // context.closePath();
+            context.stroke();
+
+            context.fillStyle = '#ffa800';
+            context.fill();
           } else {
             nP = that.map.latLngToLayerPoint(L.latLng(traj[i + 1].lat, traj[i + 1].lon)); // Next point
             pP = that.map.latLngToLayerPoint(L.latLng(traj[i - 1].lat, traj[i - 1].lon)); // Previous point
             points = findPoints(traj[i].tfh, valExt, cP, pP, nP);
+            pointArray.push(points);
+            // first line
+            context.lineWidth = 3;
+            context.strokeStyle = '#ffa800';
+            // context.beginPath();
+            context.moveTo(pointArray[i-1][0].x, pointArray[i-1][0].y);
+            context.lineTo(points[0].x, points[0].y);
+            // context.closePath();
+            context.stroke();
+
+            // second line
+            context.lineWidth = 3;
+            context.strokeStyle = '#ffa800';
+            context.lineWidth = 3;
+            // context.beginPath();
+            context.moveTo(pointArray[i-1][1].x, pointArray[i-1][1].y);
+            context.lineTo(points[1].x, points[1].y);
+            // context.closePath();
+            context.stroke();
           }
 
           if (i < traj.length - 1) {
             context.lineWidth = 3;
             context.strokeStyle = 'black'
-            context.beginPath();
+            // context.beginPath();
             context.moveTo(cP.x, cP.y);
             context.lineTo(nP.x, nP.y);
-            context.closePath();
+            // context.closePath();
             context.stroke();
           }
 
-          // first line
-          context.lineWidth = 3;
-          context.strokeStyle = 'blue'
-          context.beginPath();
-          context.moveTo(cP.x, cP.y);
-          context.lineTo(points[0].x, points[0].y);
-          context.closePath();
-          context.stroke();
+          // // first line
+          // context.lineWidth = 3;
+          // context.strokeStyle = 'blue'
+          // context.beginPath();
+          // context.moveTo(cP.x, cP.y);
+          // context.lineTo(points[0].x, points[0].y);
+          // context.closePath();
+          // context.stroke();
 
-          // // second line
-          context.lineWidth = 3;
-          context.strokeStyle = 'red'
-          context.lineWidth = 3;
-          context.beginPath();
-          context.moveTo(cP.x, cP.y);
-          context.lineTo(points[1].x, points[1].y);
-          context.closePath();
-          context.stroke();
+          // // // second line
+          // context.lineWidth = 3;
+          // context.strokeStyle = 'red'
+          // context.lineWidth = 3;
+          // context.beginPath();
+          // context.moveTo(cP.x, cP.y);
+          // context.lineTo(points[1].x, points[1].y);
+          // context.closePath();
+          // context.stroke();
         }
       });
       context.save();
@@ -156,18 +218,47 @@ export class AppComponent implements OnInit {
       if (p1 != undefined && p3 != undefined) {
         // ============== Orthogonal Midpoint ===================+
         // Determining the midpoints
-        const mP1 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 },
-          mP2 = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
-        // Determining the perpendicular slopes ->  -1/slope
-        const pS1 = -1 / ((p2.y - p1.y) / (p2.x - p1.x)),
-          pS2 = -1 / ((p3.y - p2.y) / (p3.x - p2.x));
-        // Determining the intersection of the slopes
-        const j = (pS1 * (mP1.x - mP2.x) - mP1.y + mP2.y) / (pS1 - pS2);
-        // point of intersection
-        const iP = { x: p2.x + j, y: p2.y + j * ((pS1 + pS2) / 2) };
-        // determining intersecting slope
-        const iS = (p2.y - iP.y) / (p2.x - iP.x);
+        // const mP1 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 },
+        //   mP2 = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
+        // // Determining the perpendicular slopes ->  -1/slope
+        // const pS1 = -1 / ((p2.y - p1.y) / (p2.x - p1.x)),
+        //   pS2 = -1 / ((p3.y - p2.y) / (p3.x - p2.x));
+        // // Determining the intersection of the slopes
+        // const j = (pS1 * (mP1.x - mP2.x) - mP1.y + mP2.y) / (pS1 - pS2);
+        // // point of intersection
+        // const iP = { x: p2.x + j, y: p2.y + j * ((pS1 + pS2) / 2) };
+        // // determining intersecting slope
+        // const iS = (p2.y - iP.y) / (p2.x - iP.x);
         // ============== Orthogonal Midpoint ===================+
+
+        // ============== Random Guy on SO Solution ==============
+        // Normalizing the vectors
+        let v1 = { x: (p1.x - p2.x), y: (p1.y - p2.y) },
+          v2 = { x: (p2.x - p3.x), y: (p2.y - p3.y) };
+        const lV1 = 1.0 / Math.hypot(v1.x, v1.y),
+          lV2 = 1.0 / Math.hypot(v2.x, v2.y);
+        v1.x *= lV1;
+        v1.y *= lV1;
+        v2.x *= lV2;
+        v2.y *= lV2;
+
+        // rotating the vectors by 90
+        const rV1 = { x: -v1.y, y: v1.x },
+          rV2 = { x: -v2.y, y: v2.x };
+
+        // adding and normalizing into a single vector
+        let pV = { x: rV1.x + rV2.x, y: rV1.y + rV2.y };
+        const lPV = 1.0 / Math.hypot(pV.x, pV.y);
+        pV.x *= lPV;
+        pV.y *= lPV;
+
+        // determining the points 
+        pV.x *= widthScale(val);
+        pV.y *= widthScale(val);
+
+        dP1 = { x: p2.x - pV.x, y: p2.y - pV.y };
+        dP2 = { x: p2.x + pV.x, y: p2.y + pV.y };
+        // ============== Random Guy on SO Solution ==============
 
         // ================ Using Triangle Incenter ==============
         // // determining the distance of all points
@@ -194,33 +285,33 @@ export class AppComponent implements OnInit {
         // determining y-intercept
         // const iY = iP.y - iS * iP.x
 
-        if (iS == 0) { // if the slope is horizontal
-          console.log("Hello")
-          dP1.x = p2.x - widthScale(val);
-          dP2.x = p2.x + widthScale(val);
-          dP1.y = p2.y; // + widthScale(val)
-          dP2.y = p2.y; // - widthScale(val)
-        } else if (!isFinite(iS)) { // if the slope is vertical
-          dP1.x = p2.x; // + widthScale(val)
-          dP2.x = p2.x; // - widthScale(val)
-          dP1.y = p2.y - widthScale(val);
-          dP2.y = p2.y + widthScale(val);
-        } else {
-          const dx = (widthScale(val) / Math.sqrt(1 + (iS * iS)));
-          const dy = iS * dx;
-          dP1.x = p2.x + dx;
-          dP2.x = p2.x - dx;
-          dP1.y = p2.y + dy;
-          dP2.y = p2.y - dy;
-        }
+        //   if (iS == 0) { // if the slope is horizontal
+        //     console.log("Hello")
+        //     dP1.x = p2.x - widthScale(val);
+        //     dP2.x = p2.x + widthScale(val);
+        //     dP1.y = p2.y; // + widthScale(val)
+        //     dP2.y = p2.y; // - widthScale(val)
+        //   } else if (!isFinite(iS)) { // if the slope is vertical
+        //     dP1.x = p2.x; // + widthScale(val)
+        //     dP2.x = p2.x; // - widthScale(val)
+        //     dP1.y = p2.y - widthScale(val);
+        //     dP2.y = p2.y + widthScale(val);
+        //   } else {
+        //     const dx = (widthScale(val) / Math.sqrt(1 + (iS * iS)));
+        //     const dy = iS * dx;
+        //     dP1.x = p2.x + dx;
+        //     dP2.x = p2.x - dx;
+        //     dP1.y = p2.y + dy;
+        //     dP2.y = p2.y - dy;
+        //   }
       } else if (p1 != undefined) { // determine the angle of the start of the trajectory
         const pS1 = -1 / ((p2.y - p1.y) / (p2.x - p1.x));
         const dx = (widthScale(val) / Math.sqrt(1 + (pS1 * pS1)));
         const dy = pS1 * dx;
-        dP1.x = p2.x + dx;
-        dP2.x = p2.x - dx;
-        dP1.y = p2.y + dy;
-        dP2.y = p2.y - dy;
+        dP1.x = p2.x - dx;
+        dP2.x = p2.x + dx;
+        dP1.y = p2.y - dy;
+        dP2.y = p2.y + dy;
       } else if (p3 != undefined) { // determine teh angle of the end of the trajectory
         const pS2 = -1 / ((p3.y - p2.y) / (p3.x - p2.x));
         const dx = (widthScale(val) / Math.sqrt(1 + (pS2 * pS2)));
