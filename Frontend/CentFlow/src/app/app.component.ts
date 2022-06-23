@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import * as d3 from 'd3';
 import * as L from 'leaflet';
 
-import { AppService } from 'src/services/app.service';
+import { AppService } from 'src/app/service/app.service';
 
 import fakeData from '../assets/fakeData.json';
 
@@ -29,7 +29,7 @@ export class AppComponent implements OnInit {
       zoom: 4,
       zoomDelta: 0.5,
       minZoom: 4,
-      maxZoom: 14,
+      maxZoom: 9,
       maxBounds: bounds
     };
 
@@ -42,7 +42,7 @@ export class AppComponent implements OnInit {
     L.svg().addTo(this.map);
     L.canvas().addTo(this.map);
 
-    let svg = d3.select(this.map.getPanes().overlayPane).select('svg'),
+    let svg = d3.select(this.map.getPanes().overlayPane).select('svg').attr('z-index', 301),
       g = svg.append("g");
     let canvas: any = d3.select(this.map.getPanes().overlayPane).select('canvas').attr('z-index', 300),
       context = canvas.node().getContext('2d');
@@ -51,15 +51,21 @@ export class AppComponent implements OnInit {
     const dots = g.selectAll('dot')
       .data(fakeData)
       .join('circle')
+      .attr("class", "leaflet-interactive")
+      .attr('pointer-events', 'painted')
       .attr("cx", d => this.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
       .attr("cy", d => this.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y)
       .attr("r", d => 5) //d.tfh/1000
       .style('fill', 'white')
       .style('stroke', 'black');
 
+    dots.on('click', (event, d) => startDialog(d));
     this.map.on('zoomend', updateOnZoom);
     this.map.on('moveend', updateOnPan);
-    console.log(that.map.latLngToLayerPoint(L.latLng(fakeData[11].lat, fakeData[11].lon)));
+    
+    function startDialog(d: any) {
+      console.log(d);
+    }
 
 
     draw(fakeData);
