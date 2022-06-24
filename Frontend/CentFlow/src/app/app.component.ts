@@ -1,10 +1,14 @@
 import { Component, OnInit } from '@angular/core';
+import { FormControl, FormGroup } from '@angular/forms';
+import { AppService } from 'src/app/service/app.service';
+import { DialogComponent } from './dialog/dialog.component';
+import { MatDialog } from '@angular/material/dialog';
+
 import * as d3 from 'd3';
 import * as L from 'leaflet';
 
-import { AppService } from 'src/app/service/app.service';
-
 import fakeData from '../assets/fakeData.json';
+
 
 @Component({
   selector: 'app-root',
@@ -15,11 +19,18 @@ import fakeData from '../assets/fakeData.json';
 export class AppComponent implements OnInit {
   title = 'CentFlow';
 
-  constructor(private aS: AppService) { }
+  constructor(private aS: AppService, public dialog: MatDialog) { }
 
   private map!: L.Map;
   private maxTrajWidth = 30 // the maximum width the trajectory graph can have. 
-
+  mapScale: string = 'linear';
+  intervalScale: string = 'month';
+  minDate: Date = new Date('2012-01-01');
+  maxDate: Date = new Date('2020-12-31');
+  range = new FormGroup({
+    start: new FormControl(),
+    end: new FormControl(),
+  });
   ngOnInit() {
     const that = this;
     const blBounds = L.latLng(-50, -10),
@@ -59,13 +70,9 @@ export class AppComponent implements OnInit {
       .style('fill', 'white')
       .style('stroke', 'black');
 
-    dots.on('click', (event, d) => startDialog(d));
+    dots.on('click', (event, d) => that.startDialog(d));
     this.map.on('zoomend', updateOnZoom);
     this.map.on('moveend', updateOnPan);
-    
-    function startDialog(d: any) {
-      console.log(d);
-    }
 
 
     draw(fakeData);
@@ -152,7 +159,7 @@ export class AppComponent implements OnInit {
             context.lineWidth = 3;
             context.strokeStyle = 'black'
             context.beginPath()
-            context.moveTo(pointArray[i-1][2].x, pointArray[i-1][2].y);
+            context.moveTo(pointArray[i - 1][2].x, pointArray[i - 1][2].y);
             context.lineTo(pointArray[i][2].x, pointArray[i][2].y);
           } else {
             context.lineTo(pointArray[i][2].x, pointArray[i][2].y);
@@ -168,8 +175,8 @@ export class AppComponent implements OnInit {
         const t1 = tP[0],
           t2 = tP[1];
         const pST = -1 / ((t1.y - t2.y) / (t1.x - t2.x));
-        const dT = Math.sqrt( (t1.x - t2.x)**2 + (t1.y - t2.y)**2);
-        const dx = ( (dT/2) / Math.sqrt(1 + (pST * pST)));
+        const dT = Math.sqrt((t1.x - t2.x) ** 2 + (t1.y - t2.y) ** 2);
+        const dx = ((dT / 2) / Math.sqrt(1 + (pST * pST)));
         const dy = pST * dx;
         let t3 = pointArray[traj.length - 1][2];
         t3.x -= dx;
@@ -193,22 +200,8 @@ export class AppComponent implements OnInit {
       const widthScale = d3.scaleLinear().domain([0, ext[1]]).range([0, that.maxTrajWidth]);
 
       if (p1 != undefined && p3 != undefined) {
-        // ============== Orthogonal Midpoint ===================+
-        // Determining the midpoints
-        // const mP1 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 },
-        //   mP2 = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
-        // // Determining the perpendicular slopes ->  -1/slope
-        // const pS1 = -1 / ((p2.y - p1.y) / (p2.x - p1.x)),
-        //   pS2 = -1 / ((p3.y - p2.y) / (p3.x - p2.x));
-        // // Determining the intersection of the slopes
-        // const j = (pS1 * (mP1.x - mP2.x) - mP1.y + mP2.y) / (pS1 - pS2);
-        // // point of intersection
-        // const iP = { x: p2.x + j, y: p2.y + j * ((pS1 + pS2) / 2) };
-        // // determining intersecting slope
-        // const iS = (p2.y - iP.y) / (p2.x - iP.x);
-        // ============== Orthogonal Midpoint ===================+
-
-        // ============== Random Guy on SO Solution ==============
+        // Determining the intersection of bisecting vectors to get the orthogonal vector
+        // This method will not work when the distance between two centroids is zero. 
         // Normalizing the vectors
         let v1 = { x: (p1.x - p2.x), y: (p1.y - p2.y) },
           v2 = { x: (p2.x - p3.x), y: (p2.y - p3.y) };
@@ -235,52 +228,6 @@ export class AppComponent implements OnInit {
 
         dP1 = { x: p2.x - pV.x, y: p2.y - pV.y };
         dP2 = { x: p2.x + pV.x, y: p2.y + pV.y };
-        // ============== Random Guy on SO Solution ==============
-
-        // ================ Using Triangle Incenter ==============
-        // // determining the distance of all points
-        // const a1 = p1.x - p2.x,
-        //   b1 = p1.y - p2.y,
-        //   a2 = p2.x - p3.x,
-        //   b2 = p2.y - p3.y,
-        //   a3 = p3.x - p1.x,
-        //   b3 = p3.y - p1.y;
-        // const d1 = Math.sqrt(a1 * a1 + b1 * b1),
-        //   d2 = Math.sqrt(a2 * a2 + b2 * b2),
-        //   d3 = Math.sqrt(a3 * a3 + b3 * b3);
-
-        // // point of intersection
-        // const iP = {
-        //   x: (d1 * p1.x + d2 * p2.x + d3 * p3.x) / (d1 + d2 + d3),
-        //   y: (d1 * p1.y + d2 * p2.y + d3 * p3.y) / (d1 + d2 + d3)
-        // };
-        // // determining intersecting slope
-        // const iS = -1 / (p2.y - iP.y) / (p2.x - iP.x);
-        // ================ Using Triangle Incenter ==============
-
-
-        // determining y-intercept
-        // const iY = iP.y - iS * iP.x
-
-        //   if (iS == 0) { // if the slope is horizontal
-        //     console.log("Hello")
-        //     dP1.x = p2.x - widthScale(val);
-        //     dP2.x = p2.x + widthScale(val);
-        //     dP1.y = p2.y; // + widthScale(val)
-        //     dP2.y = p2.y; // - widthScale(val)
-        //   } else if (!isFinite(iS)) { // if the slope is vertical
-        //     dP1.x = p2.x; // + widthScale(val)
-        //     dP2.x = p2.x; // - widthScale(val)
-        //     dP1.y = p2.y - widthScale(val);
-        //     dP2.y = p2.y + widthScale(val);
-        //   } else {
-        //     const dx = (widthScale(val) / Math.sqrt(1 + (iS * iS)));
-        //     const dy = iS * dx;
-        //     dP1.x = p2.x + dx;
-        //     dP2.x = p2.x - dx;
-        //     dP1.y = p2.y + dy;
-        //     dP2.y = p2.y - dy;
-        //   }
       } else if (p1 != undefined) { // determine the angle of the start of the trajectory
         const pS1 = -1 / ((p2.y - p1.y) / (p2.x - p1.x));
         const dx = (widthScale(val) / Math.sqrt(1 + (pS1 * pS1)));
@@ -301,5 +248,15 @@ export class AppComponent implements OnInit {
 
       return [dP1, dP2]
     }
+  }
+  onChange(event: any) {
+
+  }
+  startDialog(d: any) {
+    this.dialog.open(DialogComponent, {
+      data: {
+        d: d
+      }
+    })
   }
 }
