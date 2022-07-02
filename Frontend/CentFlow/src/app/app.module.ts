@@ -39,7 +39,7 @@ import { HttpClientModule } from '@angular/common/http';
     // MatCheckboxModule,
     FormsModule
   ],
-  providers: [ApiService, AppComponent],
+  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

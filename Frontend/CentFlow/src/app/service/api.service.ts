@@ -9,8 +9,12 @@ export class ApiService {
 
   constructor(private http: HttpClient) { }
 
+  private url = 'http://localhost:5000';
 
-  public getCentroids(): Observable<CentroidData[]> {
-    return this.http.get<CentroidData[]>('http://localhost:5000/getCentroids')
+  public getCentroids(split?: string, start?: string, end?: string): Observable<CentroidData[]> {
+    if (start != undefined && end != undefined) {
+      return this.http.get<CentroidData[]>(this.url + '/getCentroids?start=' + start + '&end=' + end + '&split=' + split);
+    }
+    return this.http.get<CentroidData[]>(this.url + '/getCentroids');
   }
 }

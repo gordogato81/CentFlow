@@ -32,5 +32,39 @@ export class DialogComponent implements OnInit {
     }).addTo(this.map);
     L.svg().addTo(this.map);
     L.canvas().addTo(this.map);
+
+    // // adds canvas element for a given data point
+    // function draw(d: any) {
+    //   let colorMap: any;
+    //   // determining the color scaling based on user input
+    //   if (that.mapScale == 'log') {
+    //     colorMap = d3.scaleSymlog<string, number>();
+    //   } else if (that.mapScale == 'sqrt') {
+    //     colorMap = d3.scaleSqrt();
+    //   } else if (that.mapScale == 'linear') {
+    //     colorMap = d3.scaleLinear();
+    //   }
+
+    //   colorMap.domain([0, that.dMax]).range(["orange", "purple"]);
+    //   const newY = that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y + 0.1;
+    //   const newX = that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x;
+    //   context.beginPath();
+    //   context.fillStyle = colorMap(d.tfh);
+    //   context.rect(newX, newY, that.detSize(d)[0], that.detSize(d)[1]);
+    //   context.fill();
+    //   context.closePath();
+    // }
+
+    // // removes all previous canvas elements
+    // function clearContext() {
+    //   context.clearRect(0, 0, canvas.attr("width"), canvas.attr("height"));
+    // }
+
+    // // rerender datapoints when the map moves or zooms.
+    // function update() {
+    //   if (that.loaded) {
+    //     that.render(that.r_data);
+    //   }
+    // }
   }
 }
