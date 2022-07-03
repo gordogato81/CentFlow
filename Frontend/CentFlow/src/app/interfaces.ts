@@ -1,5 +1,8 @@
 export interface DialogData {
-  d: any;
+  d: CentroidData,
+  interval: string,
+  rangeStart: string,
+  rangeEnd: string
 }
 
 export interface CentroidData {
@@ -7,5 +10,18 @@ export interface CentroidData {
   lat: number,
   lon: number,
   startdate: string,
+  enddate: string,
+  tfh: number
+}
+
+export interface graphData {
+  enddate: string,
+  startdate: string,
+  tfh: number
+}
+
+export interface clustData {
+  lat: number,
+  lon: number,
   tfh: number
 }

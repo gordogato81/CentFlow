@@ -1,18 +1,21 @@
 #dMap {
-    width: 30vw;
-    height: 50vh;
-    display: inline-block;
-    margin-left: 0.5vw;
+  width: 30vw;
+  height: 50vh;
+  display: inline-block;
+  margin-left: 0.5vw;
 }
 #dChart {
-    width: 30vw;
-    height: 50vh;
-    display: inline-block;
-    background-color: lightgrey;
-    margin-right: 0.5vw;
+  width: 30vw;
+  height: 50vh;
+  display: inline-block;
+  background-color: lightgrey;
+  margin-right: 0.5vw;
 }
 #dFilter {
-    width: 60vw;
-    height: 10vh;
-    display: block;
+  width: 60vw;
+  height: 10vh;
+  display: block;
+}
+.field {
+  margin-bottom: -0.625em;
 }

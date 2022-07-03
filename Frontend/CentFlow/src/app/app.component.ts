@@ -41,7 +41,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     const that = this;
-    const blBounds = L.latLng(-50, -10),
+    const blBounds = L.latLng(-70, -10),
       trBounds = L.latLng(30, 160),
       bounds = L.latLngBounds(blBounds, trBounds);
     const mapOptions = {
@@ -93,7 +93,7 @@ export class AppComponent implements OnInit {
       .attr('pointer-events', 'painted')
       .attr("cx", d => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
       .attr("cy", d => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y)
-      .attr("r", d => 5) //d.tfh/1000
+      .attr("r", d => 4) //d.tfh/1000
       .style('fill', 'white')
       .style('stroke', 'black');
 
@@ -112,11 +112,9 @@ export class AppComponent implements OnInit {
 
   updateOnZoom() {
     const cdata = this.aS.getData();
-    console.log(cdata)
     const map = this.aS.getMap();
     const dots = d3.selectAll('circle');
     this.draw(cdata);
-    console.log(dots)
     dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
       .attr("cy", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
   }
@@ -153,8 +151,8 @@ export class AppComponent implements OnInit {
             pointArray.push(points);
 
             context.lineWidth = 3;
-            // context.strokeStyle = '#ffb800'
-            context.strokeStyle = 'red'
+            context.strokeStyle = '#ffb800'
+            // context.strokeStyle = 'red'
             context.save();
             context.globalAlpha = 0.75;
             context.beginPath();
@@ -289,22 +287,12 @@ export class AppComponent implements OnInit {
       const pS1 = -1 / ((p1.y - p2.y) / (p1.x - p2.x));
       const dx = (widthScale(val) / Math.sqrt(1 + (pS1 * pS1)));
       const dy = pS1 * dx;
-      if (p2.x < p1.x && p2.y > p1.y) { // bottom left
+      if (p2.y > p1.y) { // bottom
         dP1.x = p2.x - dx;
         dP2.x = p2.x + dx;
         dP1.y = p2.y - dy;
         dP2.y = p2.y + dy;
-      } else if (p2.x > p1.x && p2.y > p1.y) { // bottom right
-        dP1.x = p2.x - dx;
-        dP2.x = p2.x + dx;
-        dP1.y = p2.y - dy;
-        dP2.y = p2.y + dy;
-      } else if (p2.x < p1.x && p2.y < p1.y) { // top left
-        dP1.x = p2.x + dx;
-        dP2.x = p2.x - dx;
-        dP1.y = p2.y + dy;
-        dP2.y = p2.y - dy;
-      } else if (p2.x > p1.x && p2.y < p1.y) { // top right
+      } else if (p2.y < p1.y) { // top 
         dP1.x = p2.x + dx;
         dP2.x = p2.x - dx;
         dP1.y = p2.y + dy;
@@ -320,22 +308,12 @@ export class AppComponent implements OnInit {
       const pS2 = -1 / ((p2.y - p3.y) / (p2.x - p3.x));
       const dx = (widthScale(val) / Math.sqrt(1 + (pS2 * pS2)));
       const dy = pS2 * dx;
-      if (p2.x < p3.x && p2.y > p3.y) { // bottom left
+      if (p2.y > p3.y) { // bottom
         dP1.x = p2.x + dx;
         dP2.x = p2.x - dx;
         dP1.y = p2.y + dy;
         dP2.y = p2.y - dy;
-      } else if (p2.x > p3.x && p2.y > p3.y) { // bottom right
-        dP1.x = p2.x + dx;
-        dP2.x = p2.x - dx;
-        dP1.y = p2.y + dy;
-        dP2.y = p2.y - dy;
-      } else if (p2.x < p3.x && p2.y < p3.y) { // top left
-        dP1.x = p2.x - dx;
-        dP2.x = p2.x + dx;
-        dP1.y = p2.y - dy;
-        dP2.y = p2.y + dy;
-      } else if (p2.x > p3.x && p2.y < p3.y) { // top right
+      } else if (p2.y < p3.y) { // top 
         dP1.x = p2.x - dx;
         dP2.x = p2.x + dx;
         dP1.y = p2.y - dy;
@@ -365,7 +343,10 @@ export class AppComponent implements OnInit {
   startDialog(d: any) {
     this.dialog.open(DialogComponent, {
       data: {
-        d: d
+        d: d,
+        interval: this.intervalScale,
+        rangeStart: this.range.value.start,
+        rangeEnd: this.range.value.end
       }
     })
   }
