@@ -4,7 +4,9 @@ import { clustData, DialogData, graphData } from '../interfaces';
 import * as L from 'leaflet';
 import * as d3 from 'd3';
 import { ApiService } from '../service/api.service';
+import { DialogService } from '../service/dialog.service';
 
+declare var renderQueue: any;
 
 @Component({
   selector: 'app-dialog',
@@ -13,7 +15,7 @@ import { ApiService } from '../service/api.service';
 })
 export class DialogComponent implements OnInit {
 
-  constructor(@Inject(MAT_DIALOG_DATA) public data: DialogData, private ds: ApiService,) { }
+  constructor(@Inject(MAT_DIALOG_DATA) public data: DialogData, private ds: ApiService, private diaS: DialogService) { }
 
   map!: L.Map;
   dIntervalScale = 'week';
@@ -22,6 +24,12 @@ export class DialogComponent implements OnInit {
   dMax = 0;
   canvas: any;
   context: any;
+  renderer: any;
+  cData: any = undefined;
+  CID = this.data.d.cid;
+  startDate = this.dateToStr(new Date(this.data.d.startdate));
+  endDate = this.dateToStr(new Date(this.data.d.enddate));
+  tfh = Math.round(this.data.d.tfh * 100) / 100;
   ngOnInit(): void {
     const that = this;
     const mapOptions = {
@@ -39,51 +47,69 @@ export class DialogComponent implements OnInit {
     }).addTo(this.map);
     L.svg().addTo(this.map);
     L.canvas().addTo(this.map);
-    this.canvas= d3.select(this.map.getPanes().overlayPane).select('canvas').attr('z-index', 300)
+    this.diaS.setMap(this.map);
+    this.canvas = d3.select(this.map.getPanes().overlayPane).select('canvas').attr('z-index', 300)
     this.context = this.canvas.node().getContext('2d');
-
+    this.diaS.setCanvas(this.canvas);
+    this.diaS.setContext(this.context);
     this.drawGraph(this.data.d.cid, this.data.interval);
     this.createCluster(this.data.d.cid, this.data.d.startdate, this.data.d.enddate);
+
+
   }
 
   createCluster(cid: number, start: string, end: string) {
-    this.ds.getCluster(cid, start, end).subscribe((data: any) => {
-      this.drawCluster(data);
-    });
-  }
-
-  drawCluster(data: clustData[]) {
     const that = this;
-    const dMax = d3.max(data, (d: clustData) => +d.tfh)
-    
-    this.context.clearRect(0, 0, this.canvas.attr("width"), this.canvas.attr("height"));
-    let colorMap: any;
-    // determining the color scaling based on user input
-    if (this.mapScaleDialog == 'log') {
-      colorMap = d3.scaleSymlog<string, number>();
-    } else if (this.mapScaleDialog == 'sqrt') {
-      colorMap = d3.scaleSqrt();
-    } else if (this.mapScaleDialog == 'linear') {
-      colorMap = d3.scaleLinear();
+    this.ds.getCluster(cid, start, end).subscribe((data: any) => {
+      this.cData = data;
+      this.dMax = d3.max(data, (d: clustData) => +d.tfh)!;
+      this.renderer = new renderQueue(draw).clear(clearContext);
+      this.renderer(this.cData);
+      // this.draw(data);
+
+      const latExt: any = d3.extent(data, (d: clustData) => +d.lat)!;
+      const lonExt: any = d3.extent(data, (d: clustData) => +d.lon)!;
+      const bounds = L.latLngBounds(L.latLng(latExt[0], lonExt[0]), L.latLng(latExt[1], lonExt[1]))
+      this.map.fitBounds(bounds);
+    });
+
+    this.map.on('zoomend, moveend', update);
+
+    function draw(d: clustData) {
+
+      let colorMap: any;
+      // determining the color scaling based on user input
+      if (that.mapScaleDialog == 'log') {
+        colorMap = d3.scaleSymlog<string, number>();
+      } else if (that.mapScaleDialog == 'sqrt') {
+        colorMap = d3.scaleSqrt();
+      } else if (that.mapScaleDialog == 'linear') {
+        colorMap = d3.scaleLinear();
+      }
+      colorMap.domain([0, that.dMax]).range(["orange", "purple"]);
+      const newY = that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y + 0.1;
+      const newX = that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x;
+      that.context.beginPath();
+      that.context.fillStyle = colorMap(d.tfh);
+      that.context.rect(newX, newY, that.detSize(d)[0], that.detSize(d)[1]);
+      that.context.fill();
+      that.context.closePath();
     }
 
-    colorMap.domain([0, dMax]).range(["orange", "purple"]);
-    data.forEach((d: clustData) => {
-      const newY = this.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y + 0.1;
-      const newX = this.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x;
-      this.context.beginPath();
-      this.context.fillStyle = colorMap(d.tfh);
-      this.context.rect(newX, newY, this.detSize(d)[0], this.detSize(d)[1]);
-      this.context.fill();
-      this.context.closePath();
-    });
-    this.map.on('zoomend moveend', update)
+    function clearContext() {
+      that.context.clearRect(0, 0, that.canvas.attr("width"), that.canvas.attr("height"));
+    }
     function update() {
-      that.drawCluster(data);
+      if (that.cData != undefined) {
+        that.renderer(that.cData);
+      }
     }
   }
+
+
 
   drawGraph(cid: number, interval: string) {
+    const that = this;
     this.ds.getClusterGraph(cid, interval).subscribe((gdata: any) => {
       if (!d3.select('#dChart').select('svg').empty()) d3.select('#dChart').select('svg').remove(); //removes previous chart if it exists
       const grata: graphData[] = gdata!
@@ -140,7 +166,15 @@ export class DialogComponent implements OnInit {
         .attr("width", x.bandwidth())
         .attr("height", d => height - y(d.tfh))
         .attr("fill", "purple")
+        .on('click', (event, d) => clicked(d));
     })
+
+    function clicked(d: graphData) {
+      that.startDate = that.dateToStr(new Date(d.startdate));
+      that.endDate = that.dateToStr(new Date(d.enddate));
+      that.tfh = Math.round(d.tfh * 100) / 100;;
+      that.createCluster(cid, d.startdate, d.enddate)
+    }
   }
 
   detSize(d: any) {
@@ -183,6 +217,10 @@ export class DialogComponent implements OnInit {
 
   }
 
+  onChangeMapScale(event: any) {
+    this.createCluster(this.CID, this.startDate, this.endDate);
+  }
+
   onChangeChartScale(event: any) {
     this.drawGraph(this.data.d.cid, this.data.interval);
   }
@@ -190,4 +228,36 @@ export class DialogComponent implements OnInit {
   dateToStr(d: Date) {
     return d.getFullYear() + '-' + ("0" + (d.getMonth() + 1)).slice(-2) + '-' + ("0" + d.getDate()).slice(-2)
   }
+
+  // drawCluster(data: clustData[]) {
+  //   const that = this;
+  //   const dMax = d3.max(data, (d: clustData) => +d.tfh)
+
+  //   this.context.clearRect(0, 0, this.canvas.attr("width"), this.canvas.attr("height"));
+  //   let colorMap: any;
+  //   // determining the color scaling based on user input
+  //   if (this.mapScaleDialog == 'log') {
+  //     colorMap = d3.scaleSymlog<string, number>();
+  //   } else if (this.mapScaleDialog == 'sqrt') {
+  //     colorMap = d3.scaleSqrt();
+  //   } else if (this.mapScaleDialog == 'linear') {
+  //     colorMap = d3.scaleLinear();
+  //   }
+
+  //   colorMap.domain([0, dMax]).range(["orange", "purple"]);
+  //   data.forEach((d: clustData) => {
+  //     const newY = this.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y + 0.1;
+  //     const newX = this.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x;
+  //     this.context.beginPath();
+  //     this.context.fillStyle = colorMap(d.tfh);
+  //     this.context.rect(newX, newY, this.detSize(d)[0], this.detSize(d)[1]);
+  //     this.context.fill();
+  //     this.context.closePath();
+  //   });
+  //   this.map.on('zoomend moveend', update)
+  //   function update() {
+  //     that.drawCluster(data);
+  //   }
+  // }
+
 }

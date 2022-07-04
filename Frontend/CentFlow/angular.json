@@ -37,7 +37,9 @@
               "./node_modules/leaflet/dist/leaflet.css",
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [
+              "src/assets/render-queue.js"
+            ]
           },
           "configurations": {
             "production": {

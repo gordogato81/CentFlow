@@ -28,8 +28,8 @@ export class AppComponent implements OnInit {
   ) { }
 
   private map!: L.Map;
-  private maxTrajWidth = 15 // the maximum width the trajectory graph can have. 
-  mapScale: string = 'log';
+  private maxTrajWidth = 12 // the maximum width the trajectory graph can have. 
+  mapScale: string = 'linear';
   intervalScale: string = 'week';
   minDate: Date = new Date('2012-01-01');
   maxDate: Date = new Date('2020-12-31');
@@ -128,7 +128,7 @@ export class AppComponent implements OnInit {
     const canvas = this.aS.getCanvas();
     const context = this.aS.getContext();
     const map = this.aS.getMap();
-    const tMax: any = d3.max(data, (d: CentroidData) => d.tfh);
+    // const tMax: any = d3.max(data, (d: CentroidData) => d.tfh);
     context.clearRect(0, 0, canvas.width, canvas.height);
     // context.restore();
     let clusters = new Set();
@@ -146,7 +146,7 @@ export class AppComponent implements OnInit {
           const cP = map.latLngToLayerPoint(L.latLng(traj[i].lat, traj[i].lon)); // Current point
           if (i == 0) { // First point
             nP = map.latLngToLayerPoint(L.latLng(traj[i + 1].lat, traj[i + 1].lon)); // Next point
-            points = this.findPoints(traj[i].tfh, [0, tMax], cP, undefined, nP);
+            points = this.findPoints(traj[i].tfh, valExt, cP, undefined, nP);
             points.push(cP);
             pointArray.push(points);
 
@@ -160,14 +160,14 @@ export class AppComponent implements OnInit {
             context.lineTo(points[0].x, points[0].y);
           } else if (i == traj.length - 1) { // Last point 
             pP = map.latLngToLayerPoint(L.latLng(traj[i - 1].lat, traj[i - 1].lon)); // Previous point
-            points = this.findPoints(traj[i].tfh, [0, tMax], cP, pP, undefined);
+            points = this.findPoints(traj[i].tfh, valExt, cP, pP, undefined);
             points.push(cP);
             pointArray.push(points);
             context.lineTo(points[0].x, points[0].y);
           } else {
             nP = map.latLngToLayerPoint(L.latLng(traj[i + 1].lat, traj[i + 1].lon)); // Next point
             pP = map.latLngToLayerPoint(L.latLng(traj[i - 1].lat, traj[i - 1].lon)); // Previous point
-            points = this.findPoints(traj[i].tfh, [0, tMax], cP, pP, nP);
+            points = this.findPoints(traj[i].tfh, valExt, cP, pP, nP); //[0, valExt[1]]
             points.push(cP);
             pointArray.push(points);
             context.lineTo(points[0].x, points[0].y);
