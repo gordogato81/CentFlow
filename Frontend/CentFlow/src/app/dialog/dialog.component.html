@@ -3,13 +3,6 @@
   <div id="dFilter">
     <mat-card>
       <mat-form-field appearance="fill" class="field">
-        <mat-label>Select Time Interval Duration</mat-label>
-        <mat-select [(value)]="dIntervalScale" (valueChange)="onChangeDialog($event)">
-          <mat-option value="week">Week</mat-option>
-          <mat-option value="month">Month</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="fill" class="field">
         <mat-label>Select Map Scaling</mat-label>
         <mat-select [(value)]="mapScaleDialog" (valueChange)="onChangeMapScale($event)">
           <mat-option value="linear">Linear Scaling</mat-option>
@@ -25,9 +18,6 @@
           <mat-option value="log">Logarithmic Scaling</mat-option>
         </mat-select>
       </mat-form-field>
-      <!-- <button mat-raised-button><</button>
-      <button mat-raised-button>></button> -->
-
     </mat-card>
   </div>
   <div id="dChart">

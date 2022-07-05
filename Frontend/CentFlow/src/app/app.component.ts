@@ -70,7 +70,7 @@ export class AppComponent implements OnInit {
     this.aS.setCanvas(canvas);
     this.aS.setMap(this.map);
     const start = "2020-01-01";
-    const end = "2020-01-31";
+    const end = "2020-02-29";
     this.range.setValue({ start: start, end: end });
     this.ds.getCentroids(this.intervalScale, start, end).subscribe((cents) => {
       this.loaded = true;
@@ -93,11 +93,11 @@ export class AppComponent implements OnInit {
       .attr('pointer-events', 'painted')
       .attr("cx", d => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
       .attr("cy", d => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y)
-      .attr("r", d => 4) //d.tfh/1000
+      .attr("r", 4) //d.tfh/1000
       .style('fill', 'white')
       .style('stroke', 'black');
 
-    dots.on('click', (event, d) => this.startDialog(d));
+    dots.on('click', (event, d) => this.startDialog(d, cents));
     map.on('zoomend', zooming);
     map.on('moveend', panning);
 
@@ -340,10 +340,11 @@ export class AppComponent implements OnInit {
       })
     }
   }
-  startDialog(d: any) {
+  startDialog(d: CentroidData, data: CentroidData[]) {
     this.dialog.open(DialogComponent, {
       data: {
         d: d,
+        data: data,
         interval: this.intervalScale,
         rangeStart: this.range.value.start,
         rangeEnd: this.range.value.end

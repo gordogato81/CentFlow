@@ -1,6 +1,6 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { clustData, DialogData, graphData } from '../interfaces';
+import { CentroidData, clustData, DialogData, graphData, hullData } from '../interfaces';
 import * as L from 'leaflet';
 import * as d3 from 'd3';
 import { ApiService } from '../service/api.service';
@@ -54,13 +54,117 @@ export class DialogComponent implements OnInit {
     this.diaS.setContext(this.context);
     this.drawGraph(this.data.d.cid, this.data.interval);
     this.createCluster(this.data.d.cid, this.data.d.startdate, this.data.d.enddate);
-
-
+    this.createHull(this.data.d.cid, this.data.interval, this.data.d.startdate, this.data.d.enddate);
   }
 
+  createHull(cid: number, split: string, start: string, end: string) {
+    const that = this;
+    const d = this.data.data.filter((d: CentroidData) => d.cid == cid && d.startdate == start && d.enddate == end);
+    const cI = this.data.data.indexOf(d[0]);
+    const pP = this.data.data[cI - 1];
+    const nP = this.data.data[cI + 1];
+    let no = '';
+    let start1, start2, end1, end2;
+    if (pP.cid == cid) {
+      start1 = this.dateToStr(new Date(pP.startdate));
+      end1 = this.dateToStr(new Date(pP.enddate));
+    } else {
+      start1 = '2011-01-01';
+      end1 = '2011-01-01';
+      no = "pP";
+    }
+    if (nP.cid == cid) {
+      start2 = this.dateToStr(new Date(nP.startdate));
+      end2 = this.dateToStr(new Date(nP.enddate));
+    } else {
+      start2 = '2011-01-01';
+      end2 = '2011-01-01';
+      no = "nP";
+    }
+
+    this.ds.getClusterHulls(cid, start1, end1, start2, end2, split).subscribe((hulls: hullData[]) => {
+      if (hulls.length > 0) {
+        this.drawHull(hulls, no);
+      }
+
+    });
+  }
+  drawHull(hulls: hullData[], no: string) {
+    const map = this.diaS.getMap();
+    const that = this;
+    
+    // Transforming svg locations to leaflet coordinates
+    const transform = d3.geoTransform({
+      point: function (x, y) {
+        const point = map.latLngToLayerPoint([y, x]);
+        this.stream.point(point.x, point.y);
+      },
+    });
+    let firstHull: hullData[] = [],
+      secondHull: hullData[] = [];
+    if (no == 'pP') {
+      secondHull = [hulls[0]];
+    } else if (no == 'nP') {
+      firstHull = [hulls[0]];
+    } else {
+      firstHull = [hulls[0]];
+      secondHull = [hulls[1]];
+    }
+    // const firstHull = [hulls[0]],
+    //   secondHull = [hulls[1]];
+    // Adding transformation to the path
+    const path = d3.geoPath().projection(transform);
+    const hullSVG = d3.select(map.getPanes().overlayPane).select('svg');
+    if (!hullSVG.selectAll('g').empty()) hullSVG.selectAll('g').remove();//removes previous hull if it exists
+    let firstPath = hullSVG.append('g').selectAll('path')
+      .data(firstHull)
+      .enter()
+      .append('path')
+      .attr('d', (d: hullData) => path(JSON.parse(d.hull)))
+      .attr("class", "leaflet-interactive")
+      .attr('pointer-events', 'painted')
+      .style('fill', 'blue')
+      .style('fill-opacity', 0.3)
+      .attr('stroke', 'blue')
+      .attr('stroke-opacity', 0.2);
+
+    let secondPath = hullSVG.append('g').selectAll('path')
+      .data(secondHull)
+      .enter()
+      .append('path')
+      .attr('d', (d: hullData) => path(JSON.parse(d.hull)))
+      .attr("class", "leaflet-interactive")
+      .attr('pointer-events', 'painted')
+      .style('fill', 'green')
+      .style('fill-opacity', 0.3)
+      .attr('stroke', 'green')
+      .attr('stroke-opacity', 0.2);
+
+    // this.faoTooltip = d3.select('#tooltip2')
+    //   .attr("class", "leaflet-interactive")
+    //   .style('visibility', 'hidden')
+    //   .style("position", "absolute")
+    //   .style("background-color", "white")
+    //   .style("border", "solid")
+    //   .style("border-width", "1px")
+    //   .style("border-radius", "5px")
+    //   .style("padding", "10px")
+    //   .style('opacity', 0.7)
+    //   .style('z-index', 10000);
+
+    // features.on('pointermove', mousemove)
+    //   .on('pointerout', mouseleave)
+
+    map.on('zoomend', update);
+
+    function update() {
+      firstPath.attr('d', (d: hullData) => path(JSON.parse(d.hull)));
+      secondPath.attr('d', (d: hullData) => path(JSON.parse(d.hull)));
+    }
+  }
   createCluster(cid: number, start: string, end: string) {
     const that = this;
-    this.ds.getCluster(cid, start, end).subscribe((data: any) => {
+    this.ds.getCluster(cid, start, end).subscribe((data: clustData[]) => {
       this.cData = data;
       this.dMax = d3.max(data, (d: clustData) => +d.tfh)!;
       this.renderer = new renderQueue(draw).clear(clearContext);
@@ -173,7 +277,8 @@ export class DialogComponent implements OnInit {
       that.startDate = that.dateToStr(new Date(d.startdate));
       that.endDate = that.dateToStr(new Date(d.enddate));
       that.tfh = Math.round(d.tfh * 100) / 100;;
-      that.createCluster(cid, d.startdate, d.enddate)
+      that.createCluster(cid, d.startdate, d.enddate);
+      that.createHull(that.data.d.cid, that.data.interval, d.startdate, d.enddate);
     }
   }
 

@@ -1,5 +1,6 @@
 export interface DialogData {
   d: CentroidData,
+  data: CentroidData[]
   interval: string,
   rangeStart: string,
   rangeEnd: string
@@ -24,4 +25,10 @@ export interface clustData {
   lat: number,
   lon: number,
   tfh: number
+}
+
+export interface hullData {
+  enddate: string,
+  hull: any,
+  startdate: string
 }

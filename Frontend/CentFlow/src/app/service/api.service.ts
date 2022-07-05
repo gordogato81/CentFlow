@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CentroidData } from '../interfaces'
+import { CentroidData, clustData, graphData, hullData } from '../interfaces'
 @Injectable({
   providedIn: 'root'
 })
@@ -20,15 +20,22 @@ export class ApiService {
 
   public getClusterGraph(cid: number, split?: string) {
     if (cid != undefined && split != undefined) {
-      return this.http.get(this.url + '/getClusterGraph?split=' + split + '&cid=' + cid);
+      return this.http.get<graphData[]>(this.url + '/getClusterGraph?split=' + split + '&cid=' + cid);
     }
-    return this.http.get(this.url + '/getClusterGraph');
+    return this.http.get<graphData[]>(this.url + '/getClusterGraph');
   }
 
   public getCluster(cid: number, start: string, end: string) {
     if (start != undefined && end != undefined && cid != undefined) {
-      return this.http.get(this.url + '/getClusterDots?start=' + start + '&end=' + end + '&cid=' + cid);
+      return this.http.get<clustData[]>(this.url + '/getClusterDots?start=' + start + '&end=' + end + '&cid=' + cid);
     }
-    return this.http.get(this.url + '/getClusterDots');
+    return this.http.get<clustData[]>(this.url + '/getClusterDots');
+  }
+
+  public getClusterHulls(cid: number, start1: string, end1: string, start2: string, end2: string, split: string) {
+    if (split!= undefined && cid != undefined) {
+      return this.http.get<hullData[]>(this.url + '/getClusterHull?start1=' + start1 + '&end1=' + end1 + '&start2=' + start2 + '&end2=' + end2 + '&cid=' + cid + '&split=' + split);
+    }
+    return this.http.get<hullData[]>(this.url + '/getClusterHull');
   }
 }

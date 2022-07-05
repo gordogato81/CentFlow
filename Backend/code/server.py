@@ -101,3 +101,40 @@ def getClusterGraph():
         results = cursor.fetchall()
 
     return jsonify(results), 200
+
+@app.route('/getClusterHull', methods=['GET', 'POST'])
+def getClusterHull():
+    connection = psycopg2.connect(host="charon04.inf.uni-konstanz.de", port=5432,
+                                  dbname="fishingdb", user="wittekindt", password="HLFiqcjkJLOfcfOysnLR")
+
+    start1 = request.args.get("start1", "2019-12-30", type=str)
+    end1 = request.args.get("end1", "2020-01-05", type=str)
+    start2 = request.args.get("start2", "2020-01-13", type=str)
+    end2 = request.args.get("end2", "2020-01-19", type=str)
+    split = request.args.get("split", "week", type=str)
+    cid = request.args.get("cid", 5, type=int)
+    query = """
+    with mp as (
+        select date_trunc(%s, "date")::date as startDate, 
+        ((date_trunc(%s, "date")::date) + interval %s - interval '1 day')::date as endDate,
+        ST_collect(ST_Point(lon, lat)) as multi
+        from test_table
+        where (date between %s and %s
+        or date between %s and %s)
+        and cid = %s
+        group by cid, startDate
+        order by startDate asc
+    )
+
+    select ST_AsGeoJSON(ST_ConvexHull(multi)) as hull, startDate, endDate
+    from mp 
+    group by startDate, endDate, hull
+    order by startDate
+    """
+
+    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+        query = cursor.mogrify(query, (split, split, "1 " + split, start1, end1, start2, end2, cid))
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+    return jsonify(results), 200
