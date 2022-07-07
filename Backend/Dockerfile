@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 
-ENV APP_DIR=/var/opt/fisheye
+ENV APP_DIR=/var/opt/centflow
 RUN mkdir -p ${APP_DIR}
 WORKDIR ${APP_DIR}
 

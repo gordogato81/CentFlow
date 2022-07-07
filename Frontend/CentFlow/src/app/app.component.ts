@@ -30,7 +30,7 @@ export class AppComponent implements OnInit {
   private map!: L.Map;
   private maxTrajWidth = 12 // the maximum width the trajectory graph can have. 
   mapScale: string = 'linear';
-  intervalScale: string = 'week';
+  intervalScale: string = 'month';
   minDate: Date = new Date('2012-01-01');
   maxDate: Date = new Date('2020-12-31');
   range = new FormGroup({
@@ -38,6 +38,7 @@ export class AppComponent implements OnInit {
     end: new FormControl(),
   });
   loaded = false;
+  previousScale = this.intervalScale;
 
   ngOnInit() {
     const that = this;
@@ -49,6 +50,7 @@ export class AppComponent implements OnInit {
       zoomDelta: 0.5,
       minZoom: 4,
       maxZoom: 14,
+      wheelPxPerZoomLevel: 120,
       maxBounds: bounds
     };
 
@@ -111,12 +113,51 @@ export class AppComponent implements OnInit {
   }
 
   updateOnZoom() {
-    const cdata = this.aS.getData();
     const map = this.aS.getMap();
-    const dots = d3.selectAll('circle');
-    this.draw(cdata);
-    dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
-      .attr("cy", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
+    if (map.getZoom() < 6) {
+      if (this.previousScale == 'month') {
+        const cdata = this.aS.getData();
+        const dots = d3.selectAll('circle');
+        this.draw(cdata);
+        dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
+          .attr("cy", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
+      } else {
+        this.intervalScale = 'month';
+        const start = new Date(Date.parse(this.range.value.start));
+        const end = new Date(Date.parse(this.range.value.end));
+        this.ds.getCentroids(this.intervalScale, this.dateToStr(start), this.dateToStr(end)).subscribe(cents => {
+          const canvas = this.aS.getCanvas();
+          const context = this.aS.getContext();
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          this.aS.setData(cents);
+          this.dots(cents);
+          this.draw(cents);
+          this.previousScale = 'month';
+        });
+
+      }
+    } else {
+      if (this.previousScale == 'week') {
+        const cdata = this.aS.getData();
+        const dots = d3.selectAll('circle');
+        this.draw(cdata);
+        dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
+          .attr("cy", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
+      } else {
+        this.intervalScale = 'week';
+        const start = new Date(Date.parse(this.range.value.start));
+        const end = new Date(Date.parse(this.range.value.end));
+        this.ds.getCentroids(this.intervalScale, this.dateToStr(start), this.dateToStr(end)).subscribe(cents => {
+          const canvas = this.aS.getCanvas();
+          const context = this.aS.getContext();
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          this.aS.setData(cents);
+          this.dots(cents);
+          this.draw(cents);
+          this.previousScale = 'week';
+        });
+      }
+    }
   }
   updateOnPan() {
     if (this.loaded) {
@@ -153,7 +194,7 @@ export class AppComponent implements OnInit {
             context.lineWidth = 3;
             context.strokeStyle = '#ffb800'
             // context.strokeStyle = 'red'
-            context.save();
+            // context.save();
             context.globalAlpha = 0.75;
             context.beginPath();
             context.moveTo(points[1].x, points[1].y);
@@ -187,7 +228,7 @@ export class AppComponent implements OnInit {
             context.lineTo(pointArray[i][1].x, pointArray[i][1].y);
           }
         }
-        context.restore();
+        // context.restore();
         for (let i = 0; i < traj.length; i++) {
           if (i == 1) {
             context.lineWidth = 3;
@@ -201,7 +242,6 @@ export class AppComponent implements OnInit {
         }
         context.stroke();
         context.closePath();
-
         //drawing triangle head
         const fP = pointArray[traj.length - 1][2]; // final point
         const pP = pointArray[traj.length - 2][2]; // second to last point
@@ -229,7 +269,7 @@ export class AppComponent implements OnInit {
         context.fill();
       }
     });
-    context.save();
+    // context.save();
   }
   /**
    * determines the location of points that are orthogonal to up to three other points

@@ -9,11 +9,11 @@ services:
   #     - "5432:5432"
 
   backend:
-    build: ./backend
+    build: ./Backend
     ports:
       - "5000:5000"
     volumes:
-      - ./backend/code:/var/opt/fisheye
+      - ./Backend/code:/var/opt/centflow
 
 volumes:
   database-data:

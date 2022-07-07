@@ -37,6 +37,7 @@ export class DialogComponent implements OnInit {
       zoomDelta: 0.5,
       minZoom: 4,
       maxZoom: 9,
+      wheelPxPerZoomLevel: 120,
     };
 
     this.map = L.map('dMap', mapOptions).setView([0, 80]); // defaults to world view 
