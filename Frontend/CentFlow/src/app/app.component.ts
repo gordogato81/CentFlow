@@ -28,7 +28,8 @@ export class AppComponent implements OnInit {
   ) { }
 
   private map!: L.Map;
-  private maxTrajWidth = 12 // the maximum width the trajectory graph can have. 
+  private maxTrajWidth = 12; // the maximum width the trajectory graph can have. 
+  private zoomThreshold = 7; // the threshold at which zoom level the multiscale transition from months to weeks occurs.  
   mapScale: string = 'linear';
   intervalScale: string = 'month';
   minDate: Date = new Date('2012-01-01');
@@ -114,7 +115,7 @@ export class AppComponent implements OnInit {
 
   updateOnZoom() {
     const map = this.aS.getMap();
-    if (map.getZoom() < 6) {
+    if (map.getZoom() < this.zoomThreshold) {
       if (this.previousScale == 'month') {
         const cdata = this.aS.getData();
         const dots = d3.selectAll('circle');

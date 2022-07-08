@@ -78,8 +78,8 @@ export class DialogComponent implements OnInit {
       start2 = this.dateToStr(new Date(nP.startdate));
       end2 = this.dateToStr(new Date(nP.enddate));
     } else {
-      start2 = '2011-01-01';
-      end2 = '2011-01-01';
+      start2 = '2022-01-01';
+      end2 = '2022-01-01';
       no = "nP";
     }
 
