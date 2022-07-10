@@ -59,41 +59,38 @@ export class DialogComponent implements OnInit {
   }
 
   createHull(cid: number, split: string, start: string, end: string) {
-    const that = this;
-    const d = this.data.data.filter((d: CentroidData) => d.cid == cid && d.startdate == start && d.enddate == end);
-    const cI = this.data.data.indexOf(d[0]);
-    const pP = this.data.data[cI - 1];
-    const nP = this.data.data[cI + 1];
-    let no = '';
-    let start1, start2, end1, end2;
-    if (pP.cid == cid) {
-      start1 = this.dateToStr(new Date(pP.startdate));
-      end1 = this.dateToStr(new Date(pP.enddate));
+    let start1: string, start2: string, end1: string, end2: string;
+    const st = new Date(start);
+    const en = new Date(end);
+    if (this.data.interval == 'week') {
+      start1 = this.dateToStr(new Date(st.getFullYear(), st.getMonth(), st.getDate() - 7));
+      start2 = this.dateToStr(new Date(st.getFullYear(), st.getMonth(), st.getDate() + 7));
+      end1 = this.dateToStr(new Date(en.getFullYear(), en.getMonth(), en.getDate() - 7));
+      end2 = this.dateToStr(new Date(en.getFullYear(), en.getMonth(), en.getDate() + 7));
     } else {
-      start1 = '2011-01-01';
-      end1 = '2011-01-01';
-      no = "pP";
+      start1 = this.dateToStr(new Date(st.getFullYear(), st.getMonth() - 1, 1));
+      start2 = this.dateToStr(new Date(st.getFullYear(), st.getMonth() + 1, 1));
+      end1 = this.dateToStr(new Date(en.getFullYear(), en.getMonth(), 0));
+      end2 = this.dateToStr(new Date(en.getFullYear(), en.getMonth() + 2, 0));
     }
-    if (nP.cid == cid) {
-      start2 = this.dateToStr(new Date(nP.startdate));
-      end2 = this.dateToStr(new Date(nP.enddate));
-    } else {
-      start2 = '2022-01-01';
-      end2 = '2022-01-01';
-      no = "nP";
-    }
-
     this.ds.getClusterHulls(cid, start1, end1, start2, end2, split).subscribe((hulls: hullData[]) => {
       if (hulls.length > 0) {
-        this.drawHull(hulls, no);
+        if (hulls.length > 1) {
+          this.drawHull(hulls, '');
+        } else {
+          if (new Date(hulls[0].startdate).getTime() == new Date(start1).getTime()) {
+            this.drawHull(hulls, 'nP');
+          } else {
+            this.drawHull(hulls, 'pP');
+          }
+        }
       }
 
     });
   }
   drawHull(hulls: hullData[], no: string) {
     const map = this.diaS.getMap();
-    const that = this;
-    
+
     // Transforming svg locations to leaflet coordinates
     const transform = d3.geoTransform({
       point: function (x, y) {
@@ -101,15 +98,15 @@ export class DialogComponent implements OnInit {
         this.stream.point(point.x, point.y);
       },
     });
-    let firstHull: hullData[] = [],
-      secondHull: hullData[] = [];
+    let previousHull: hullData[] = [],
+      nextHull: hullData[] = [];
     if (no == 'pP') {
-      secondHull = [hulls[0]];
+      nextHull = [hulls[0]];
     } else if (no == 'nP') {
-      firstHull = [hulls[0]];
+      previousHull = [hulls[0]];
     } else {
-      firstHull = [hulls[0]];
-      secondHull = [hulls[1]];
+      previousHull = [hulls[0]];
+      nextHull = [hulls[1]];
     }
     // const firstHull = [hulls[0]],
     //   secondHull = [hulls[1]];
@@ -118,7 +115,7 @@ export class DialogComponent implements OnInit {
     const hullSVG = d3.select(map.getPanes().overlayPane).select('svg');
     if (!hullSVG.selectAll('g').empty()) hullSVG.selectAll('g').remove();//removes previous hull if it exists
     let firstPath = hullSVG.append('g').selectAll('path')
-      .data(firstHull)
+      .data(previousHull)
       .enter()
       .append('path')
       .attr('d', (d: hullData) => path(JSON.parse(d.hull)))
@@ -130,7 +127,7 @@ export class DialogComponent implements OnInit {
       .attr('stroke-opacity', 0.2);
 
     let secondPath = hullSVG.append('g').selectAll('path')
-      .data(secondHull)
+      .data(nextHull)
       .enter()
       .append('path')
       .attr('d', (d: hullData) => path(JSON.parse(d.hull)))
@@ -140,21 +137,6 @@ export class DialogComponent implements OnInit {
       .style('fill-opacity', 0.3)
       .attr('stroke', 'green')
       .attr('stroke-opacity', 0.2);
-
-    // this.faoTooltip = d3.select('#tooltip2')
-    //   .attr("class", "leaflet-interactive")
-    //   .style('visibility', 'hidden')
-    //   .style("position", "absolute")
-    //   .style("background-color", "white")
-    //   .style("border", "solid")
-    //   .style("border-width", "1px")
-    //   .style("border-radius", "5px")
-    //   .style("padding", "10px")
-    //   .style('opacity', 0.7)
-    //   .style('z-index', 10000);
-
-    // features.on('pointermove', mousemove)
-    //   .on('pointerout', mouseleave)
 
     map.on('zoomend', update);
 
@@ -234,6 +216,18 @@ export class DialogComponent implements OnInit {
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const tooltip = d3.select("#dChart")
+        .append('div')
+        .style('z-index', 9999)
+        .style('visibility', 'hidden')
+        .style('opacity', 0.8)
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "1px")
+        .style("border-radius", "5px")
+        .style("padding", "10px");
+
       // X axis
       let x = d3.scaleBand<string>()
         .range([0, width])
@@ -271,7 +265,26 @@ export class DialogComponent implements OnInit {
         .attr("width", x.bandwidth())
         .attr("height", d => height - y(d.tfh))
         .attr("fill", "purple")
+        .on('pointermove', (event, d) => mousemove(event, d))
+        .on('pointerout', mouseleave)
         .on('click', (event, d) => clicked(d));
+
+      // displays tooltip when the moouse moves
+      function mousemove(event: PointerEvent, d: graphData) {
+        tooltip
+          .style("position", "absolute")
+          .style('visibility', 'visible')
+          .style('left', event.pageX + 20 + "px")
+          .style('top', event.pageY + 20 + "px")
+          .html('Start Date: ' + that.dateToStr(new Date(d.startdate)) + '<br>'
+            + 'End Date: ' + that.dateToStr(new Date(d.enddate)) + '<br>'
+            + 'Total Fishing Hours: ' + Math.round(d.tfh * 100) / 100);
+      }
+
+      // removes tooltip 
+      function mouseleave() {
+        if (tooltip) tooltip.style('visibility', 'hidden');
+      }
     })
 
     function clicked(d: graphData) {
@@ -281,6 +294,8 @@ export class DialogComponent implements OnInit {
       that.createCluster(cid, d.startdate, d.enddate);
       that.createHull(that.data.d.cid, that.data.interval, d.startdate, d.enddate);
     }
+
+
   }
 
   detSize(d: any) {
@@ -334,36 +349,5 @@ export class DialogComponent implements OnInit {
   dateToStr(d: Date) {
     return d.getFullYear() + '-' + ("0" + (d.getMonth() + 1)).slice(-2) + '-' + ("0" + d.getDate()).slice(-2)
   }
-
-  // drawCluster(data: clustData[]) {
-  //   const that = this;
-  //   const dMax = d3.max(data, (d: clustData) => +d.tfh)
-
-  //   this.context.clearRect(0, 0, this.canvas.attr("width"), this.canvas.attr("height"));
-  //   let colorMap: any;
-  //   // determining the color scaling based on user input
-  //   if (this.mapScaleDialog == 'log') {
-  //     colorMap = d3.scaleSymlog<string, number>();
-  //   } else if (this.mapScaleDialog == 'sqrt') {
-  //     colorMap = d3.scaleSqrt();
-  //   } else if (this.mapScaleDialog == 'linear') {
-  //     colorMap = d3.scaleLinear();
-  //   }
-
-  //   colorMap.domain([0, dMax]).range(["orange", "purple"]);
-  //   data.forEach((d: clustData) => {
-  //     const newY = this.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y + 0.1;
-  //     const newX = this.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x;
-  //     this.context.beginPath();
-  //     this.context.fillStyle = colorMap(d.tfh);
-  //     this.context.rect(newX, newY, this.detSize(d)[0], this.detSize(d)[1]);
-  //     this.context.fill();
-  //     this.context.closePath();
-  //   });
-  //   this.map.on('zoomend moveend', update)
-  //   function update() {
-  //     that.drawCluster(data);
-  //   }
-  // }
 
 }

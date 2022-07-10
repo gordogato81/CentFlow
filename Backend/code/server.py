@@ -54,13 +54,13 @@ def getCentroids():
     split = request.args.get("split", "week", type=str)
     query = """
     with mp as (
-        select date_trunc(%s, "date")::date as startDate, 
-        ((date_trunc(%s, "date")::date) + interval %s - interval '1 day')::date as endDate,
+        select to_char(date_trunc(%s, "date"), 'YYYY-MM-DD') as startDate, 
+        to_char(((date_trunc(%s, "date")::date) + interval %s - interval '1 day'), 'YYYY-MM-DD') as endDate,
         ST_collect(ST_Point(lon, lat)) as multi, cid, sum(tfh) as tfh
         from test_table
         where date between %s and %s 
         and cid != -1
-        group by cid, startDate
+        group by cid, startDate, endDate
         order by startDate asc
     )
 
@@ -88,10 +88,10 @@ def getClusterGraph():
     split = request.args.get("split", "week", type=str)
     cid = request.args.get("cid", 56, type=int)
     query = """
-    select DATE_TRUNC(%s, "date")::date as startDate, ((DATE_TRUNC(%s, "date")::date) + interval %s - interval '1 day')::date as endDate,  sum(tfh) as tfh
+    select to_char(DATE_TRUNC(%s, "date"), 'YYYY-MM-DD') as startDate, to_char(((DATE_TRUNC(%s, "date")::date) + interval %s - interval '1 day'), 'YYYY-MM-DD') as endDate,  sum(tfh) as tfh
     from test_table
     where cid = %s
-    group by startDate
+    group by startDate, endDate
     order by startDate
     """
 

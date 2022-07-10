@@ -17,5 +17,15 @@
   display: block;
 }
 .field {
-  margin-bottom: -1.0em;
+  margin-bottom: -1.25em;
+}
+#info {
+  display: inline-flex;
+  text-align: center;
+  vertical-align: top;
+  margin-left: 5vw;
+}
+#card {
+  width: 59.3vw;
+  padding-bottom: 1%;
 }

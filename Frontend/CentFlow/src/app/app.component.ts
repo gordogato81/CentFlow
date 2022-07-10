@@ -48,7 +48,7 @@ export class AppComponent implements OnInit {
       bounds = L.latLngBounds(blBounds, trBounds);
     const mapOptions = {
       zoom: 4,
-      zoomDelta: 0.5,
+      zoomDelta: 1,
       minZoom: 4,
       maxZoom: 14,
       wheelPxPerZoomLevel: 120,
@@ -100,7 +100,9 @@ export class AppComponent implements OnInit {
       .style('fill', 'white')
       .style('stroke', 'black');
 
-    dots.on('click', (event, d) => this.startDialog(d, cents));
+    dots.on('click', (event, d) => this.startDialog(d, cents))
+      .on('pointermove', (event: any, d: any) => mousemove(event, d))
+      .on('pointerout', mouseleave);
     map.on('zoomend', zooming);
     map.on('moveend', panning);
 
@@ -110,6 +112,37 @@ export class AppComponent implements OnInit {
 
     function panning() {
       that.updateOnPan()
+    }
+
+    const dotTip = d3.select('#tooltip')
+      .attr("class", "leaflet-interactive")
+      .style('visibility', 'hidden')
+      .style("position", "absolute")
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "10px")
+      .style('opacity', 0.7)
+      .style('z-index', 10000);
+
+
+    // displays tooltip when the moouse moves
+    function mousemove(event: PointerEvent, d: CentroidData) {
+      dotTip
+        .style("position", "absolute")
+        .style('visibility', 'visible')
+        .style('left', event.pageX + 20 + "px")
+        .style('top', event.pageY + 20 + "px")
+        .html('CID: ' + d.cid + '<br>'
+          + 'Total Fishing Hours: ' + Math.round(d.tfh * 100) / 100 + '<br>'
+          + 'Start Date: ' + that.dateToStr(new Date(d.startdate)) + '<br>'
+          + 'End Date: ' + that.dateToStr(new Date(d.enddate)));
+    }
+
+    // removes tooltip 
+    function mouseleave() {
+      if (dotTip) dotTip.style('visibility', 'hidden');
     }
   }
 
