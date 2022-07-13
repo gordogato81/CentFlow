@@ -11,7 +11,7 @@ export class AppService {
   private canvas: any;
   private map: any;
   private cData: CentroidData[] = [];
-
+  private traj: CentroidData[][] = [];
   public setContext(context: any) {
     this.context = context;
   }
@@ -42,5 +42,13 @@ export class AppService {
 
   public getData() {
     return this.cData;
+  }
+
+  public setTrajectories(traj: CentroidData[][]) {
+    this.traj = traj;
+  }
+
+  public getTrajectories() {
+    return this.traj;
   }
 }
