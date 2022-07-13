@@ -35,7 +35,7 @@ export class DialogComponent implements OnInit {
     const mapOptions = {
       zoom: 4,
       zoomDelta: 0.5,
-      minZoom: 4,
+      minZoom: 3,
       maxZoom: 9,
       wheelPxPerZoomLevel: 120,
     };
@@ -163,7 +163,6 @@ export class DialogComponent implements OnInit {
     this.map.on('zoomend, moveend', update);
 
     function draw(d: clustData) {
-
       let colorMap: any;
       // determining the color scaling based on user input
       if (that.mapScaleDialog == 'log') {

@@ -11,6 +11,7 @@ import fakeData from '../assets/fakeData.json';
 import { ApiService } from './service/api.service';
 import { CentroidData } from './interfaces';
 
+declare var renderQueue: any;
 
 @Component({
   selector: 'app-root',
@@ -79,7 +80,8 @@ export class AppComponent implements OnInit {
       this.loaded = true;
       this.aS.setData(cents);
       this.dots(cents);
-      this.draw(cents);
+      // this.draw(cents);
+      this.createArrow(cents);
     });
 
   }
@@ -104,15 +106,15 @@ export class AppComponent implements OnInit {
       .on('pointermove', (event: any, d: any) => mousemove(event, d))
       .on('pointerout', mouseleave);
     map.on('zoomend', zooming);
-    map.on('moveend', panning);
+    // map.on('moveend', panning);
 
     function zooming() {
       that.updateOnZoom()
     }
 
-    function panning() {
-      that.updateOnPan()
-    }
+    // function panning() {
+    //   that.updateOnPan()
+    // }
 
     const dotTip = d3.select('#tooltip')
       .attr("class", "leaflet-interactive")
@@ -152,7 +154,8 @@ export class AppComponent implements OnInit {
       if (this.previousScale == 'month') {
         const cdata = this.aS.getData();
         const dots = d3.selectAll('circle');
-        this.draw(cdata);
+        // this.draw(cdata);
+        this.createArrow(cdata);
         dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
           .attr("cy", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
       } else {
@@ -165,7 +168,8 @@ export class AppComponent implements OnInit {
           context.clearRect(0, 0, canvas.width, canvas.height);
           this.aS.setData(cents);
           this.dots(cents);
-          this.draw(cents);
+          // this.draw(cents);
+          this.createArrow(cents);
           this.previousScale = 'month';
         });
 
@@ -174,7 +178,8 @@ export class AppComponent implements OnInit {
       if (this.previousScale == 'week') {
         const cdata = this.aS.getData();
         const dots = d3.selectAll('circle');
-        this.draw(cdata);
+        // this.draw(cdata);
+        this.createArrow(cdata);
         dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
           .attr("cy", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
       } else {
@@ -187,31 +192,45 @@ export class AppComponent implements OnInit {
           context.clearRect(0, 0, canvas.width, canvas.height);
           this.aS.setData(cents);
           this.dots(cents);
-          this.draw(cents);
+          // this.draw(cents);
+          this.createArrow(cents);
           this.previousScale = 'week';
         });
       }
     }
   }
-  updateOnPan() {
-    if (this.loaded) {
-      const cdata = this.aS.getData();
-      this.draw(cdata);
-    }
-  }
-  draw(data: any) {
+  // updateOnPan() {
+  //   if (this.loaded) {
+  //     const cdata = this.aS.getData();
+  //     this.draw(cdata);
+  //   }
+  // }
+  createArrow(cents: CentroidData[]) {
+    const that = this;
     const canvas = this.aS.getCanvas();
     const context = this.aS.getContext();
     const map = this.aS.getMap();
-    // const tMax: any = d3.max(data, (d: CentroidData) => d.tfh);
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    // context.restore();
-    let clusters = new Set();
-    data.forEach((element: any) => {
-      clusters.add(element['cid']);
-    });
-    clusters.forEach((clust: any) => { // O(C * 3P)
-      const traj = data.filter((x: any) => x.cid === clust);
+    let clusters = new Set(cents.map(cent => cent['cid'])); // get an array of all cluster ids
+    let trajectories: any = [];
+
+    clusters.forEach(clust => {
+      trajectories.push(cents.filter((x: any) => x.cid === clust));
+    })
+    // console.log(trajectories);
+    let renderer = new renderQueue(draw2).clear(clearContext);
+    renderer(trajectories);
+    
+    this.map.on('moveend', update);
+    
+    function clearContext() {
+      context.clearRect(0, 0, canvas.attr("width"), canvas.attr("height"));
+    }
+    function update() {
+      if (trajectories != []) {
+        renderer(trajectories);
+      }
+    }
+    function draw2(traj: CentroidData[]) {
       if (traj.length > 1) {
         const valExt: any = d3.extent(traj, (d: any) => d.tfh);
         let pointArray = [];
@@ -221,10 +240,10 @@ export class AppComponent implements OnInit {
           const cP = map.latLngToLayerPoint(L.latLng(traj[i].lat, traj[i].lon)); // Current point
           if (i == 0) { // First point
             nP = map.latLngToLayerPoint(L.latLng(traj[i + 1].lat, traj[i + 1].lon)); // Next point
-            points = this.findPoints(traj[i].tfh, valExt, cP, undefined, nP);
+            points = that.findPoints(traj[i].tfh, valExt, cP, undefined, nP);
             points.push(cP);
             pointArray.push(points);
-
+  
             context.lineWidth = 3;
             context.strokeStyle = '#ffb800'
             // context.strokeStyle = 'red'
@@ -235,14 +254,14 @@ export class AppComponent implements OnInit {
             context.lineTo(points[0].x, points[0].y);
           } else if (i == traj.length - 1) { // Last point 
             pP = map.latLngToLayerPoint(L.latLng(traj[i - 1].lat, traj[i - 1].lon)); // Previous point
-            points = this.findPoints(traj[i].tfh, valExt, cP, pP, undefined);
+            points = that.findPoints(traj[i].tfh, valExt, cP, pP, undefined);
             points.push(cP);
             pointArray.push(points);
             context.lineTo(points[0].x, points[0].y);
           } else {
             nP = map.latLngToLayerPoint(L.latLng(traj[i + 1].lat, traj[i + 1].lon)); // Next point
             pP = map.latLngToLayerPoint(L.latLng(traj[i - 1].lat, traj[i - 1].lon)); // Previous point
-            points = this.findPoints(traj[i].tfh, valExt, cP, pP, nP); //[0, valExt[1]]
+            points = that.findPoints(traj[i].tfh, valExt, cP, pP, nP); //[0, valExt[1]]
             points.push(cP);
             pointArray.push(points);
             context.lineTo(points[0].x, points[0].y);
@@ -279,7 +298,7 @@ export class AppComponent implements OnInit {
         //drawing triangle head
         const fP = pointArray[traj.length - 1][2]; // final point
         const pP = pointArray[traj.length - 2][2]; // second to last point
-        const tP = this.findPoints(valExt[1], valExt, L.point(fP.x, fP.y), L.point(pP.x, pP.y), undefined);
+        const tP = that.findPoints(valExt[1], valExt, L.point(fP.x, fP.y), L.point(pP.x, pP.y), undefined);
         const t1 = tP[0],
           t2 = tP[1];
         const pST = -1 / ((t1.y - t2.y) / (t1.x - t2.x));
@@ -294,7 +313,7 @@ export class AppComponent implements OnInit {
           t3.x -= dx;
           t3.y -= dy;
         }
-
+  
         context.fillStyle = 'black';
         context.beginPath();
         context.moveTo(t1.x, t1.y);
@@ -302,9 +321,115 @@ export class AppComponent implements OnInit {
         context.lineTo(t3.x, t3.y);
         context.fill();
       }
-    });
-    // context.save();
+    }
   }
+  
+  // draw(data: any) {
+  //   const canvas = this.aS.getCanvas();
+  //   const context = this.aS.getContext();
+  //   const map = this.aS.getMap();
+  //   // const tMax: any = d3.max(data, (d: CentroidData) => d.tfh);
+  //   context.clearRect(0, 0, canvas.width, canvas.height);
+  //   // context.restore();
+  //   let clusters = new Set();
+  //   data.forEach((element: any) => {
+  //     clusters.add(element['cid']);
+  //   });
+  //   clusters.forEach((clust: any) => { // O(C * 3P)
+  //     const traj = data.filter((x: any) => x.cid === clust);
+  //     if (traj.length > 1) {
+  //       const valExt: any = d3.extent(traj, (d: any) => d.tfh);
+  //       let pointArray = [];
+  //       // drawing the line graph along the first side
+  //       for (let i = 0; i < traj.length; i++) {
+  //         let points = undefined, nP = L.point(0, 0), pP = L.point(0, 0);
+  //         const cP = map.latLngToLayerPoint(L.latLng(traj[i].lat, traj[i].lon)); // Current point
+  //         if (i == 0) { // First point
+  //           nP = map.latLngToLayerPoint(L.latLng(traj[i + 1].lat, traj[i + 1].lon)); // Next point
+  //           points = this.findPoints(traj[i].tfh, valExt, cP, undefined, nP);
+  //           points.push(cP);
+  //           pointArray.push(points);
+
+  //           context.lineWidth = 3;
+  //           context.strokeStyle = '#ffb800'
+  //           // context.strokeStyle = 'red'
+  //           // context.save();
+  //           context.globalAlpha = 0.75;
+  //           context.beginPath();
+  //           context.moveTo(points[1].x, points[1].y);
+  //           context.lineTo(points[0].x, points[0].y);
+  //         } else if (i == traj.length - 1) { // Last point 
+  //           pP = map.latLngToLayerPoint(L.latLng(traj[i - 1].lat, traj[i - 1].lon)); // Previous point
+  //           points = this.findPoints(traj[i].tfh, valExt, cP, pP, undefined);
+  //           points.push(cP);
+  //           pointArray.push(points);
+  //           context.lineTo(points[0].x, points[0].y);
+  //         } else {
+  //           nP = map.latLngToLayerPoint(L.latLng(traj[i + 1].lat, traj[i + 1].lon)); // Next point
+  //           pP = map.latLngToLayerPoint(L.latLng(traj[i - 1].lat, traj[i - 1].lon)); // Previous point
+  //           points = this.findPoints(traj[i].tfh, valExt, cP, pP, nP); //[0, valExt[1]]
+  //           points.push(cP);
+  //           pointArray.push(points);
+  //           context.lineTo(points[0].x, points[0].y);
+  //         }
+  //       }
+  //       // iterating back accross the other side
+  //       for (let i = traj.length - 1; i > -1; i--) {
+  //         if (i == 0) { // last connection
+  //           context.lineTo(pointArray[0][1].x, pointArray[0][1].y);
+  //           context.stroke();
+  //           context.fillStyle = '#ffa800';
+  //           context.fill();
+  //           context.closePath();
+  //         } else if (i == traj.length - 1) { // Last line 
+  //           context.lineTo(pointArray[i][1].x, pointArray[i][1].y);
+  //         } else {
+  //           context.lineTo(pointArray[i][1].x, pointArray[i][1].y);
+  //         }
+  //       }
+  //       // context.restore();
+  //       for (let i = 0; i < traj.length; i++) {
+  //         if (i == 1) {
+  //           context.lineWidth = 3;
+  //           context.strokeStyle = 'black'
+  //           context.beginPath()
+  //           context.moveTo(pointArray[i - 1][2].x, pointArray[i - 1][2].y);
+  //           context.lineTo(pointArray[i][2].x, pointArray[i][2].y);
+  //         } else {
+  //           context.lineTo(pointArray[i][2].x, pointArray[i][2].y);
+  //         }
+  //       }
+  //       context.stroke();
+  //       context.closePath();
+  //       //drawing triangle head
+  //       const fP = pointArray[traj.length - 1][2]; // final point
+  //       const pP = pointArray[traj.length - 2][2]; // second to last point
+  //       const tP = this.findPoints(valExt[1], valExt, L.point(fP.x, fP.y), L.point(pP.x, pP.y), undefined);
+  //       const t1 = tP[0],
+  //         t2 = tP[1];
+  //       const pST = -1 / ((t1.y - t2.y) / (t1.x - t2.x));
+  //       const dT = Math.sqrt((t1.x - t2.x) ** 2 + (t1.y - t2.y) ** 2);
+  //       const dx = ((dT / 2) / Math.sqrt(1 + (pST * pST)));
+  //       const dy = pST * dx;
+  //       let t3 = pointArray[traj.length - 1][2];
+  //       if (fP.x > pP.x) {
+  //         t3.x += dx;
+  //         t3.y += dy;
+  //       } else {
+  //         t3.x -= dx;
+  //         t3.y -= dy;
+  //       }
+
+  //       context.fillStyle = 'black';
+  //       context.beginPath();
+  //       context.moveTo(t1.x, t1.y);
+  //       context.lineTo(t2.x, t2.y);
+  //       context.lineTo(t3.x, t3.y);
+  //       context.fill();
+  //     }
+  //   });
+  //   // context.save();
+  // }
   /**
    * determines the location of points that are orthogonal to up to three other points
    * @param val current tfh value
@@ -410,7 +535,8 @@ export class AppComponent implements OnInit {
       this.ds.getCentroids(this.intervalScale, this.dateToStr(start), this.dateToStr(end)).subscribe(cents => {
         this.aS.setData(cents);
         this.dots(cents);
-        this.draw(cents);
+        // this.draw(cents);
+        this.createArrow(cents);
       })
     }
   }
