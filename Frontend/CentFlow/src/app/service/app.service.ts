@@ -12,6 +12,8 @@ export class AppService {
   private map: any;
   private cData: CentroidData[] = [];
   private traj: CentroidData[][] = [];
+  private renderer: any;
+
   public setContext(context: any) {
     this.context = context;
   }
@@ -50,5 +52,13 @@ export class AppService {
 
   public getTrajectories() {
     return this.traj;
+  }
+
+  public setRenderer(rend: any) {
+    this.renderer = rend;
+  }
+
+  public getRenderer() {
+    return this.renderer;
   }
 }
