@@ -1,31 +1,36 @@
 #dMap {
-  width: 30vw;
+  width: 43vw;
   height: 50vh;
   display: inline-block;
   margin-left: 0.5vw;
 }
+
 #dChart {
-  width: 30vw;
+  width: 43vw;
   height: 50vh;
   display: inline-block;
   background-color: #F6F6F6;
   margin-right: 0.5vw;
 }
+
 #dFilter {
-  width: 60vw;
+  width: 85.3vw;
   height: 10vh;
   display: block;
 }
+
 .field {
   margin-bottom: -1.25em;
 }
+
 #info {
   display: inline-flex;
   text-align: center;
   vertical-align: top;
-  margin-left: 5vw;
+  margin-left: 20vw;
 }
+
 #card {
-  width: 59.3vw;
+  width: 85.3vw;
   padding-bottom: 1%;
 }
