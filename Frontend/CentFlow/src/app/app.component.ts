@@ -35,7 +35,7 @@ export class AppComponent implements OnInit {
   trajectories: CentroidData[][] = [];
   mapScale: string = 'linear';
   intervalScale: string = 'month';
-  minDate: Date = new Date('2012-01-01');
+  minDate: Date = new Date('2019-01-01');
   maxDate: Date = new Date('2020-12-31');
   range = new FormGroup({
     start: new FormControl(),
@@ -75,8 +75,8 @@ export class AppComponent implements OnInit {
     this.aS.setContext(context);
     this.aS.setCanvas(canvas);
     this.aS.setMap(this.map);
-    const start = "2020-01-01";
-    const end = "2020-02-29";
+    const start = "2019-05-01";
+    const end = "2020-05-29";
     this.range.setValue({ start: start, end: end });
     this.ds.getCentroids(this.intervalScale, start, end).subscribe((cents) => {
       this.loaded = true;

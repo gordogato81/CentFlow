@@ -25,6 +25,8 @@ export class DialogComponent implements OnInit {
   canvas: any;
   context: any;
   renderer: any;
+  tooltipViz: any;
+  legend: any;
   cData: any = undefined;
   CID = this.data.d.cid;
   startDate = this.dateToStr(new Date(this.data.d.startdate));
@@ -56,6 +58,18 @@ export class DialogComponent implements OnInit {
     this.drawGraph(this.data.d.cid, this.data.interval);
     this.createCluster(this.data.d.cid, this.data.d.startdate, this.data.d.enddate);
     this.createHull(this.data.d.cid, this.data.interval, this.data.d.startdate, this.data.d.enddate);
+
+    // initalizing tooltip
+    this.tooltipViz = d3.select('#tooltipViz')
+      .attr("class", "leaflet-interactive")
+      .style('visibility', 'hidden')
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "10px")
+      .style('opacity', 0.7)
+      .style('z-index', 9999);
   }
 
   createHull(cid: number, split: string, start: string, end: string) {
@@ -122,7 +136,7 @@ export class DialogComponent implements OnInit {
       .attr("class", "leaflet-interactive")
       .attr('pointer-events', 'painted')
       .style('fill', 'blue')
-      .style('fill-opacity', 0.3)
+      .style('fill-opacity', 0.15)
       .attr('stroke', 'blue')
       .attr('stroke-opacity', 0.2);
 
@@ -134,7 +148,7 @@ export class DialogComponent implements OnInit {
       .attr("class", "leaflet-interactive")
       .attr('pointer-events', 'painted')
       .style('fill', 'green')
-      .style('fill-opacity', 0.3)
+      .style('fill-opacity', 0.15)
       .attr('stroke', 'green')
       .attr('stroke-opacity', 0.2);
 
@@ -147,6 +161,29 @@ export class DialogComponent implements OnInit {
   }
   createCluster(cid: number, start: string, end: string) {
     const that = this;
+    const legendheight = 25;
+    const legendwidth = 345;
+
+    this.legend = d3.select('#legend')
+      .attr('height', 60)
+      .attr('width', 360);
+    let colorMap: any;
+    // determining the color scaling based on user input
+    if (that.mapScaleDialog == 'log') {
+      colorMap = d3.scaleSymlog<string, number>();
+    } else if (that.mapScaleDialog == 'sqrt') {
+      colorMap = d3.scaleSqrt();
+    } else if (that.mapScaleDialog == 'linear') {
+      colorMap = d3.scaleLinear();
+    }
+    colorMap.domain([0, that.dMax]).range(["orange", "purple"]);
+
+    // >>> removing any previous legend DOM elements 
+    if (!this.legend.selectAll('rect').empty()) this.legend.selectAll('rect').remove();
+    if (!this.legend.selectAll('g').empty()) this.legend.selectAll('g').remove();
+    if (!this.legend.selectAll('text').empty()) this.legend.selectAll('text').remove();
+    // <<< 
+
     this.ds.getCluster(cid, start, end).subscribe((data: clustData[]) => {
       this.cData = data;
       this.dMax = d3.max(data, (d: clustData) => +d.tfh)!;
@@ -158,21 +195,76 @@ export class DialogComponent implements OnInit {
       const lonExt: any = d3.extent(data, (d: clustData) => +d.lon)!;
       const bounds = L.latLngBounds(L.latLng(latExt[0], lonExt[0]), L.latLng(latExt[1], lonExt[1]))
       this.map.fitBounds(bounds);
+      colorMap.domain([0, that.dMax]).range(["orange", "purple"]);
+      const coloraxis = d3.axisBottom(colorMap).ticks(5);
+
+      // // >>> constructing legend
+      // this.legend.append("defs")
+      //   .append('linearGradient')
+      //   .attr("id", "gradient")
+      //   .attr("x1", "0%")
+      //   .attr("y1", "0%")
+      //   .attr("x2", "100%") // horizontal gradient
+      //   .attr("y2", "0%") // vertical gradient
+      //   .selectAll('stop')
+      //   .data([{ offset: "0%", color: "orange" },
+      //   { offset: "100%", color: "purple" }])
+      //   .join("stop")
+      //   .attr("offset", (d: any) => d.offset)
+      //   .attr("stop-color", (d: any) => d.color)
+
+      // const rect = this.legend
+      //   .append("rect")
+      //   .attr("x", 50)
+      //   .attr("y", 20)
+      //   .attr("width", legendwidth)
+      //   .attr("height", legendheight)
+      //   .style("fill", "url(#gradient)")
+      // // .style('opacity', 0.9);
+
+      // rect.append('g')
+      //   .attr("class", "x axis")
+      //   // .attr("transform", "translate(50, 45)")
+      //   // .attr("width", legendwidth)
+      //   .call(coloraxis);
+
+      // this.legend.append('text')
+      //   .attr('x', 80)
+      //   .attr('y', 15)
+      //   // .attr("transform", "rotate(90)")
+      //   .text('Apparent Fishing Activity in Hours')
+      // // <<<
     });
+    
 
     this.map.on('zoomend, moveend', update);
+    this.map.on('click', function (event: L.LeafletMouseEvent) {
+      console.log(event);
+      const data = that.cData;
+      // + 0.1 to the latitude to change raster position from top left to bottom left of each raster rectangle
+      const lat = that.truncate(Math.round((event.latlng.lat + 0.1) * 100) / 100);
+      const lng = that.truncate(event.latlng.lng);
+
+
+      if (!(data === undefined)) {
+        const d: any = data.find((d: clustData) => d.lat == lat && d.lon == lng);
+        if (!(d === undefined)) {
+          that.tooltipViz
+            .style("position", "absolute")
+            .style('z-index', 9999)
+            .style('visibility', 'visible')
+            .style('left', event.originalEvent.pageX + 20 + "px")
+            .style('top', event.originalEvent.pageY + 20 + "px")
+            .html('Latitude: ' + d.lat + '<br>'
+              + 'Longitude: ' + d.lon + '<br>'
+              + 'Fishing Hours: ' + Math.round(d.tfh * 100) / 100);
+        } else {
+          that.tooltipViz.style('visibility', 'hidden');
+        }
+      }
+    });
 
     function draw(d: clustData) {
-      let colorMap: any;
-      // determining the color scaling based on user input
-      if (that.mapScaleDialog == 'log') {
-        colorMap = d3.scaleSymlog<string, number>();
-      } else if (that.mapScaleDialog == 'sqrt') {
-        colorMap = d3.scaleSqrt();
-      } else if (that.mapScaleDialog == 'linear') {
-        colorMap = d3.scaleLinear();
-      }
-      colorMap.domain([0, that.dMax]).range(["orange", "purple"]);
       const newY = that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y + 0.1;
       const newX = that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x;
       that.context.beginPath();
@@ -333,10 +425,6 @@ export class DialogComponent implements OnInit {
     return size
   }
 
-  onChangeDialog(event: any) {
-
-  }
-
   onChangeMapScale(event: any) {
     this.createCluster(this.CID, this.startDate, this.endDate);
   }
@@ -347,6 +435,15 @@ export class DialogComponent implements OnInit {
 
   dateToStr(d: Date) {
     return d.getFullYear() + '-' + ("0" + (d.getMonth() + 1)).slice(-2) + '-' + ("0" + d.getDate()).slice(-2)
+  }
+
+  truncate(x: number) {
+    if (x < 0) {
+      x = Math.ceil((x - 0.1) * 10) / 10;
+    } else if (x >= 0) {
+      x = Math.floor(x * 10) / 10;
+    }
+    return x
   }
 
 }
