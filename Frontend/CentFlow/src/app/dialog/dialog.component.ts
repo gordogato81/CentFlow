@@ -63,6 +63,7 @@ export class DialogComponent implements OnInit {
     this.tooltipViz = d3.select('#tooltipViz')
       .attr("class", "leaflet-interactive")
       .style('visibility', 'hidden')
+      .style("position", "absolute")
       .style("background-color", "white")
       .style("border", "solid")
       .style("border-width", "1px")
@@ -258,7 +259,6 @@ export class DialogComponent implements OnInit {
         const d: any = data.find((d: clustData) => d.lat == lat && d.lon == lng);
         if (!(d === undefined)) {
           that.tooltipViz
-            .style("position", "absolute")
             .style('z-index', 9999)
             .style('visibility', 'visible')
             .style('left', event.originalEvent.pageX + 20 + "px")
@@ -318,6 +318,7 @@ export class DialogComponent implements OnInit {
 
       const tooltip = d3.select("#dChart")
         .append('div')
+        .style("position", "absolute")
         .style('z-index', 9999)
         .style('visibility', 'hidden')
         .style('opacity', 0.8)
@@ -371,7 +372,6 @@ export class DialogComponent implements OnInit {
       // displays tooltip when the moouse moves
       function mousemove(event: PointerEvent, d: graphData) {
         tooltip
-          .style("position", "absolute")
           .style('visibility', 'visible')
           .style('left', event.pageX + 20 + "px")
           .style('top', event.pageY + 20 + "px")
