@@ -17,6 +17,7 @@
   width: 85.3vw;
   height: 10vh;
   display: block;
+  padding-bottom: 1vh;
 }
 
 .field {
@@ -26,12 +27,21 @@
 #info {
   display: inline-flex;
   text-align: center;
-  vertical-align: top;
+  vertical-align: middle;
   margin-left: 10vw;
   margin-right: 10vw;
+  margin-bottom: 0vh;
 }
 
 #card {
   width: 85.3vw;
   padding-bottom: 1%;
+}
+
+#legend {
+  height: 60px;
+  width: 360px;
+  vertical-align: middle;
+  // background-color: gray;
+  display: inline-flex;
 }

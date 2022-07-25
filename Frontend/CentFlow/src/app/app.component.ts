@@ -445,7 +445,8 @@ export class AppComponent implements OnInit {
   }
   startDialog(d: CentroidData, data: CentroidData[]) {
     this.dialog.open(DialogComponent, {
-      maxWidth: '90vm',
+      maxWidth: '90vw',
+      maxHeight: '90vh',
       data: {
         d: d,
         data: data,

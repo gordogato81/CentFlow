@@ -161,20 +161,22 @@ export class DialogComponent implements OnInit {
   }
   createCluster(cid: number, start: string, end: string) {
     const that = this;
-    const legendheight = 25;
+    const legendheight = 10;
     const legendwidth = 345;
 
-    this.legend = d3.select('#legend')
-      .attr('height', 60)
-      .attr('width', 360);
+    this.legend = d3.select('#legend');
     let colorMap: any;
+    let colorScale: any;
     // determining the color scaling based on user input
     if (that.mapScaleDialog == 'log') {
       colorMap = d3.scaleSymlog<string, number>();
+      colorScale = d3.scaleSymlog<string, number>();
     } else if (that.mapScaleDialog == 'sqrt') {
       colorMap = d3.scaleSqrt();
+      colorScale = d3.scaleSqrt();
     } else if (that.mapScaleDialog == 'linear') {
       colorMap = d3.scaleLinear();
+      colorScale = d3.scaleLinear();
     }
     colorMap.domain([0, that.dMax]).range(["orange", "purple"]);
 
@@ -195,45 +197,51 @@ export class DialogComponent implements OnInit {
       const lonExt: any = d3.extent(data, (d: clustData) => +d.lon)!;
       const bounds = L.latLngBounds(L.latLng(latExt[0], lonExt[0]), L.latLng(latExt[1], lonExt[1]))
       this.map.fitBounds(bounds);
+      colorScale.domain([0, this.dMax]).range([0, legendwidth - 1]);
       colorMap.domain([0, that.dMax]).range(["orange", "purple"]);
-      const coloraxis = d3.axisBottom(colorMap).ticks(5);
+       
+      const coloraxis = d3.axisBottom(colorScale).ticks(5);
 
-      // // >>> constructing legend
-      // this.legend.append("defs")
-      //   .append('linearGradient')
-      //   .attr("id", "gradient")
-      //   .attr("x1", "0%")
-      //   .attr("y1", "0%")
-      //   .attr("x2", "100%") // horizontal gradient
-      //   .attr("y2", "0%") // vertical gradient
-      //   .selectAll('stop')
-      //   .data([{ offset: "0%", color: "orange" },
-      //   { offset: "100%", color: "purple" }])
-      //   .join("stop")
-      //   .attr("offset", (d: any) => d.offset)
-      //   .attr("stop-color", (d: any) => d.color)
+      // >>> constructing legend
+      this.legend.append("defs")
+        .append('linearGradient')
+        .attr("id", "gradient")
+        .attr("x1", "0%")
+        .attr("y1", "0%")
+        .attr("x2", "100%") // horizontal gradient
+        .attr("y2", "0%") // vertical gradient
+        .selectAll('stop')
+        .data([{ offset: "0%", color: "orange" },
+        { offset: "100%", color: "purple" }])
+        .join("stop")
+        .attr("offset", (d: any) => d.offset)
+        .attr("stop-color", (d: any) => d.color)
 
-      // const rect = this.legend
-      //   .append("rect")
-      //   .attr("x", 50)
-      //   .attr("y", 20)
-      //   .attr("width", legendwidth)
-      //   .attr("height", legendheight)
-      //   .style("fill", "url(#gradient)")
-      // // .style('opacity', 0.9);
+      const rect = this.legend
+        .append("rect")
+        .attr("x", 10)
+        .attr("y", 18)
+        .attr("width", legendwidth)
+        .attr("height", legendheight)
+        .style("fill", "url(#gradient)")
+      // .style('opacity', 0.9);
 
-      // rect.append('g')
-      //   .attr("class", "x axis")
-      //   // .attr("transform", "translate(50, 45)")
-      //   // .attr("width", legendwidth)
-      //   .call(coloraxis);
+      this.legend.append('g')
+        .attr("id", "legendAxis")
+        .attr("transform", "translate(10, 25)")
+        .call(coloraxis)
+        .call((g: any) => g.select(".domain")
+        .remove())
+        .selectAll("text")
+        .attr("transform", "translate(-10,0)rotate(-45)")
+        .style("text-anchor", "end");
 
-      // this.legend.append('text')
-      //   .attr('x', 80)
-      //   .attr('y', 15)
-      //   // .attr("transform", "rotate(90)")
-      //   .text('Apparent Fishing Activity in Hours')
-      // // <<<
+      this.legend.append('text')
+        .attr('x', 60)
+        .attr('y', 13)
+        // .attr("transform", "rotate(90)")
+        .text('Apparent Fishing Activity in Hours')
+      // <<<
     });
     
 

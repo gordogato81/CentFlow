@@ -3,10 +3,7 @@
     <mat-card id="card">
       <mat-form-field appearance="fill" class="field">
         <mat-label>Select Map Scaling</mat-label>
-        <mat-select
-          [(value)]="mapScaleDialog"
-          (valueChange)="onChangeMapScale($event)"
-        >
+        <mat-select [(value)]="mapScaleDialog" (valueChange)="onChangeMapScale($event)">
           <mat-option value="linear">Linear Scaling</mat-option>
           <mat-option value="sqrt">Square Root Scaling</mat-option>
           <mat-option value="log">Logarithmic Scaling</mat-option>
@@ -14,24 +11,23 @@
       </mat-form-field>
       <mat-form-field appearance="fill" class="field">
         <mat-label>Select Chart Scaling</mat-label>
-        <mat-select
-          [(value)]="chartScaleDialog"
-          (valueChange)="onChangeChartScale($event)"
-        >
+        <mat-select [(value)]="chartScaleDialog" (valueChange)="onChangeChartScale($event)">
           <mat-option value="linear">Linear Scaling</mat-option>
           <mat-option value="sqrt">Square Root Scaling</mat-option>
           <mat-option value="log">Logarithmic Scaling</mat-option>
         </mat-select>
       </mat-form-field>
       <h2 id="info">
-        CID: {{ CID }}, Total Fishing Hours: {{ tfh }}, <br/>
-        Start Date: {{ startDate }}, End Date: {{ endDate }} 
+        CID: {{ CID }}, Total Fishing Hours: {{ tfh }}, <br />
+        Start Date: {{ startDate }}, End Date: {{ endDate }}
       </h2>
       <svg id="legend"></svg>
     </mat-card>
   </div>
-  <div id="dChart"></div>
-  <div id="dMap"></div>
-  <div id="tooltip"></div>
-  <div id="tooltipViz"></div>
+  <div id="dChart">
+    <div id="tooltip"></div>
+    <div id="tooltipViz"></div>
+  </div>
+  <div id="dMap">
+  </div>
 </div>
