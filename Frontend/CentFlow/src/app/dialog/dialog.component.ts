@@ -243,6 +243,8 @@ export class DialogComponent implements OnInit {
         // .attr("transform", "rotate(90)")
         .text('Apparent Fishing Activity in Hours')
       // <<<
+
+      update()
     });
     
 

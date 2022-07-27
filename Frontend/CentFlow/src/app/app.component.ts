@@ -75,8 +75,8 @@ export class AppComponent implements OnInit {
     this.aS.setContext(context);
     this.aS.setCanvas(canvas);
     this.aS.setMap(this.map);
-    const start = "2019-05-01";
-    const end = "2020-05-29";
+    const start = "2020-01-01";
+    const end = "2020-07-31";
     this.range.setValue({ start: start, end: end });
     this.ds.getCentroids(this.intervalScale, start, end).subscribe((cents) => {
       this.loaded = true;
@@ -427,7 +427,10 @@ export class AppComponent implements OnInit {
         dP2.y = p2.y - dy;
       }
     }
-
+    dP1.x = Math.trunc(dP1.x);
+    dP1.y = Math.trunc(dP1.y);
+    dP2.x = Math.trunc(dP2.x);
+    dP2.y = Math.trunc(dP2.y);
     return [dP1, dP2]
   }
 
