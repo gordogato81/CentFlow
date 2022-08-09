@@ -55,6 +55,7 @@ export class DialogComponent implements OnInit {
     this.context = this.canvas.node().getContext('2d');
     this.diaS.setCanvas(this.canvas);
     this.diaS.setContext(this.context);
+    this.dIntervalScale = this.data.interval;
     this.drawGraph(this.data.d.cid, this.data.interval);
     this.createCluster(this.data.d.cid, this.data.d.startdate, this.data.d.enddate);
     this.createHull(this.data.d.cid, this.data.interval, this.data.d.startdate, this.data.d.enddate);
@@ -200,7 +201,7 @@ export class DialogComponent implements OnInit {
       this.map.fitBounds(bounds);
       colorScale.domain([0, this.dMax]).range([0, legendwidth - 1]);
       colorMap.domain([0, that.dMax]).range(["orange", "purple"]);
-       
+
       const coloraxis = d3.axisBottom(colorScale).ticks(5);
 
       // >>> constructing legend
@@ -232,7 +233,7 @@ export class DialogComponent implements OnInit {
         .attr("transform", "translate(10, 25)")
         .call(coloraxis)
         .call((g: any) => g.select(".domain")
-        .remove())
+          .remove())
         .selectAll("text")
         .attr("transform", "translate(-10,0)rotate(-45)")
         .style("text-anchor", "end");
@@ -246,7 +247,7 @@ export class DialogComponent implements OnInit {
 
       update()
     });
-    
+
 
     this.map.on('zoomend, moveend', update);
     this.map.on('click', function (event: L.LeafletMouseEvent) {
@@ -300,6 +301,8 @@ export class DialogComponent implements OnInit {
     const that = this;
     this.ds.getClusterGraph(cid, interval).subscribe((gdata: any) => {
       if (!d3.select('#dChart').select('svg').empty()) d3.select('#dChart').select('svg').remove(); //removes previous chart if it exists
+      if (!d3.select('#graphtooltip').empty()) d3.select('#graphtooltip').remove(); //removes previous chart if it exists
+
       const grata: graphData[] = gdata!
       const margin = { top: 30, right: 30, bottom: 60, left: 60 };
       const graphContainer = document.getElementById('dChart')!;
@@ -320,6 +323,7 @@ export class DialogComponent implements OnInit {
 
       const tooltip = d3.select("#dChart")
         .append('div')
+        .attr('id', 'graphtooltip')
         .style("position", "absolute")
         .style('z-index', 9999)
         .style('visibility', 'hidden')
@@ -359,6 +363,15 @@ export class DialogComponent implements OnInit {
       svg.append("g")
         .call(d3.axisLeft(y));
       // Bars
+      let startPrev: String, startNext: String;
+      const st = new Date(this.startDate);
+      if (this.data.interval == 'week') {
+        startPrev = this.dateToStr(new Date(st.getFullYear(), st.getMonth(), st.getDate() - 7));
+        startNext = this.dateToStr(new Date(st.getFullYear(), st.getMonth(), st.getDate() + 7));
+      } else {
+        startPrev = this.dateToStr(new Date(st.getFullYear(), st.getMonth() - 1, 1));
+        startNext = this.dateToStr(new Date(st.getFullYear(), st.getMonth() + 1, 1));
+      }
       svg.selectAll("mybar")
         .data(grata)
         .join("rect")
@@ -366,7 +379,19 @@ export class DialogComponent implements OnInit {
         .attr("y", d => y(d.tfh))
         .attr("width", x.bandwidth())
         .attr("height", d => height - y(d.tfh))
-        .attr("fill", "purple")
+        .attr("fill", d => {
+          const cDate = this.dateToStr(new Date(d.startdate))
+          // console.log(cDate)
+          if (cDate == this.dateToStr(new Date(this.startDate))) {
+            return 'grey'
+          } else if (cDate == startPrev) {
+            return 'blue'
+          } else if (cDate == startNext) {
+            return 'green'
+          } else {
+            return 'purple'
+          }
+        })
         .on('pointermove', (event, d) => mousemove(event, d))
         .on('pointerout', mouseleave)
         .on('click', (event, d) => clicked(d));
@@ -391,9 +416,10 @@ export class DialogComponent implements OnInit {
     function clicked(d: graphData) {
       that.startDate = that.dateToStr(new Date(d.startdate));
       that.endDate = that.dateToStr(new Date(d.enddate));
-      that.tfh = Math.round(d.tfh * 100) / 100;;
+      that.tfh = Math.round(d.tfh * 100) / 100;
+      that.drawGraph(cid, that.dIntervalScale)
       that.createCluster(cid, d.startdate, d.enddate);
-      that.createHull(that.data.d.cid, that.data.interval, d.startdate, d.enddate);
+      that.createHull(that.data.d.cid, that.dIntervalScale, d.startdate, d.enddate);
     }
 
 
