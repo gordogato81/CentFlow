@@ -49,9 +49,9 @@ export class DialogComponent implements OnInit {
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(this.map);
     L.svg().addTo(this.map);
-    L.canvas().addTo(this.map);
+    L.canvas({pane:'shadowPane'}).addTo(this.map);
     this.diaS.setMap(this.map);
-    this.canvas = d3.select(this.map.getPanes().overlayPane).select('canvas').attr('z-index', 300)
+    this.canvas = d3.select(this.map.getPanes().shadowPane).select('canvas');
     this.context = this.canvas.node().getContext('2d');
     this.diaS.setCanvas(this.canvas);
     this.diaS.setContext(this.context);

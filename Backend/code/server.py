@@ -126,7 +126,7 @@ def getClusterHull():
         order by startDate asc
     )
 
-    select ST_AsGeoJSON(ST_ConvexHull(multi)) as hull, startDate, endDate
+    select ST_AsGeoJSON(ST_ConcaveHull(multi, 0.95)) as hull, startDate, endDate
     from mp 
     group by startDate, endDate, hull
     order by startDate
