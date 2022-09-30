@@ -63,6 +63,7 @@ export class AppComponent implements OnInit {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(this.map);
+    L.control.scale().setPosition('bottomleft').addTo(this.map);
     L.svg().addTo(this.map);
     L.canvas().addTo(this.map);
 

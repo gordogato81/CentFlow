@@ -48,15 +48,19 @@ export class DialogComponent implements OnInit {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(this.map);
+    L.control.scale().setPosition('bottomleft').addTo(this.map);
     L.svg().addTo(this.map);
-    L.canvas({pane:'shadowPane'}).addTo(this.map);
+    L.canvas({ pane: 'shadowPane' }).addTo(this.map);
     this.diaS.setMap(this.map);
     this.canvas = d3.select(this.map.getPanes().shadowPane).select('canvas');
     this.context = this.canvas.node().getContext('2d');
     this.diaS.setCanvas(this.canvas);
     this.diaS.setContext(this.context);
     this.dIntervalScale = this.data.interval;
-    this.drawGraph(this.data.d.cid, this.data.interval);
+    this.ds.getClusterGraph(this.data.d.cid, this.data.interval).subscribe((gdata: any) => {
+      this.diaS.setGData(gdata);
+      this.drawGraph(this.data.d.cid, this.data.interval);
+    });
     this.createCluster(this.data.d.cid, this.data.d.startdate, this.data.d.enddate);
     this.createHull(this.data.d.cid, this.data.interval, this.data.d.startdate, this.data.d.enddate);
 
@@ -106,7 +110,6 @@ export class DialogComponent implements OnInit {
   }
   drawHull(hulls: hullData[], no: string) {
     const map = this.diaS.getMap();
-
     // Transforming svg locations to leaflet coordinates
     const transform = d3.geoTransform({
       point: function (x, y) {
@@ -161,6 +164,8 @@ export class DialogComponent implements OnInit {
       secondPath.attr('d', (d: hullData) => path(JSON.parse(d.hull)));
     }
   }
+
+  
   createCluster(cid: number, start: string, end: string) {
     const that = this;
     const legendheight = 10;
@@ -295,123 +300,120 @@ export class DialogComponent implements OnInit {
     }
   }
 
-
-
   drawGraph(cid: number, interval: string) {
     const that = this;
-    this.ds.getClusterGraph(cid, interval).subscribe((gdata: any) => {
-      if (!d3.select('#dChart').select('svg').empty()) d3.select('#dChart').select('svg').remove(); //removes previous chart if it exists
-      if (!d3.select('#graphtooltip').empty()) d3.select('#graphtooltip').remove(); //removes previous chart if it exists
+    if (!d3.select('#dChart').select('svg').empty()) d3.select('#dChart').select('svg').remove(); //removes previous chart if it exists
+    if (!d3.select('#graphtooltip').empty()) d3.select('#graphtooltip').remove(); //removes previous chart if it exists
 
-      const grata: graphData[] = gdata!
-      const margin = { top: 30, right: 30, bottom: 60, left: 60 };
-      const graphContainer = document.getElementById('dChart')!;
-      const width = graphContainer.offsetWidth - margin.left - margin.right,
-        height = graphContainer.offsetHeight - margin.top - margin.bottom;
-      const cMax: number = d3.max(grata, (d: graphData) => +d.tfh)!;
-      let barDomain: string[] = []
+    const grata: graphData[] = this.diaS.getGData()!
+    const margin = { top: 30, right: 30, bottom: 60, left: 60 };
+    const graphContainer = document.getElementById('dChart')!;
+    const width = graphContainer.offsetWidth - margin.left - margin.right,
+      height = graphContainer.offsetHeight - margin.top - margin.bottom;
+    const cMax: number = d3.max(grata, (d: graphData) => +d.tfh)!;
+    let barDomain: string[] = []
 
-      grata.forEach((element: graphData) => {
-        barDomain.push(element.startdate)
-      });
-      const svg = d3.select('#dChart')
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
+    grata.forEach((element: graphData) => {
+      barDomain.push(element.startdate)
+    });
+    const svg = d3.select('#dChart')
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
-      const tooltip = d3.select("#dChart")
-        .append('div')
-        .attr('id', 'graphtooltip')
-        .style("position", "absolute")
-        .style('z-index', 9999)
-        .style('visibility', 'hidden')
-        .style('opacity', 0.8)
-        .style("background-color", "white")
-        .style("border", "solid")
-        .style("border-width", "1px")
-        .style("border-radius", "5px")
-        .style("padding", "10px");
+    const tooltip = d3.select("#dChart")
+      .append('div')
+      .attr('id', 'graphtooltip')
+      .style("position", "absolute")
+      .style('z-index', 9999)
+      .style('visibility', 'hidden')
+      .style('opacity', 0.8)
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "10px");
 
-      // X axis
-      let x = d3.scaleBand<string>()
-        .range([0, width])
-        .domain(grata.map(d => this.dateToStr(new Date(d.startdate))))
-        .padding(0.2);
+    // X axis
+    let x = d3.scaleBand<string>()
+      .range([0, width])
+      .domain(grata.map(d => this.dateToStr(new Date(d.startdate))))
+      .padding(0.2);
 
-      svg.append("g")
-        .attr("transform", `translate(0, ${height})`)
-        .call(d3.axisBottom(x))
-        .selectAll("text")
-        .attr("transform", "translate(-10,0)rotate(-45)")
-        .style("text-anchor", "end");
+    svg.append("g")
+      .attr("transform", `translate(0, ${height})`)
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .attr("transform", "translate(-10,0)rotate(-45)")
+      .style("text-anchor", "end");
 
-      // Add Y axis
-      let y: any;
-      if (this.chartScaleDialog == 'log') {
-        y = d3.scaleSymlog();
-      } else if (this.chartScaleDialog == 'sqrt') {
-        y = d3.scaleSqrt();
-      } else {
-        y = d3.scaleLinear();
-      }
+    // Add Y axis
+    let y: any;
+    if (this.chartScaleDialog == 'log') {
+      y = d3.scaleSymlog();
+    } else if (this.chartScaleDialog == 'sqrt') {
+      y = d3.scaleSqrt();
+    } else {
+      y = d3.scaleLinear();
+    }
 
-      y.domain([0, cMax])
-        .range([height, 0]);
+    y.domain([0, cMax])
+      .range([height, 0]);
 
-      svg.append("g")
-        .call(d3.axisLeft(y));
-      // Bars
-      let startPrev: String, startNext: String;
-      const st = new Date(this.startDate);
-      if (this.data.interval == 'week') {
-        startPrev = this.dateToStr(new Date(st.getFullYear(), st.getMonth(), st.getDate() - 7));
-        startNext = this.dateToStr(new Date(st.getFullYear(), st.getMonth(), st.getDate() + 7));
-      } else {
-        startPrev = this.dateToStr(new Date(st.getFullYear(), st.getMonth() - 1, 1));
-        startNext = this.dateToStr(new Date(st.getFullYear(), st.getMonth() + 1, 1));
-      }
-      svg.selectAll("mybar")
-        .data(grata)
-        .join("rect")
-        .attr("x", d => x(this.dateToStr(new Date(d.startdate)))!)
-        .attr("y", d => y(d.tfh))
-        .attr("width", x.bandwidth())
-        .attr("height", d => height - y(d.tfh))
-        .attr("fill", d => {
-          const cDate = this.dateToStr(new Date(d.startdate))
-          // console.log(cDate)
-          if (cDate == this.dateToStr(new Date(this.startDate))) {
-            return 'grey'
-          } else if (cDate == startPrev) {
-            return 'blue'
-          } else if (cDate == startNext) {
-            return 'green'
-          } else {
-            return 'purple'
-          }
-        })
-        .on('pointermove', (event, d) => mousemove(event, d))
-        .on('pointerout', mouseleave)
-        .on('click', (event, d) => clicked(d));
+    svg.append("g")
+      .call(d3.axisLeft(y));
+    // Bars
+    let startPrev: String, startNext: String;
+    const st = new Date(this.startDate);
+    if (this.data.interval == 'week') {
+      startPrev = this.dateToStr(new Date(st.getFullYear(), st.getMonth(), st.getDate() - 7));
+      startNext = this.dateToStr(new Date(st.getFullYear(), st.getMonth(), st.getDate() + 7));
+    } else {
+      startPrev = this.dateToStr(new Date(st.getFullYear(), st.getMonth() - 1, 1));
+      startNext = this.dateToStr(new Date(st.getFullYear(), st.getMonth() + 1, 1));
+    }
+    svg.selectAll("mybar")
+      .data(grata)
+      .join("rect")
+      .attr("x", d => x(this.dateToStr(new Date(d.startdate)))!)
+      .attr("y", d => y(d.tfh))
+      .attr("width", x.bandwidth())
+      .attr("height", d => height - y(d.tfh))
+      .attr("fill", d => {
+        const cDate = this.dateToStr(new Date(d.startdate))
+        // console.log(cDate)
+        if (cDate == this.dateToStr(new Date(this.startDate))) {
+          return 'grey'
+        } else if (cDate == startPrev) {
+          return 'blue'
+        } else if (cDate == startNext) {
+          return 'green'
+        } else {
+          return 'purple'
+        }
+      })
+      .on('pointermove', (event, d) => mousemove(event, d))
+      .on('pointerout', mouseleave)
+      .on('click', (event, d) => clicked(d));
 
-      // displays tooltip when the moouse moves
-      function mousemove(event: PointerEvent, d: graphData) {
-        tooltip
-          .style('visibility', 'visible')
-          .style('left', event.pageX + 20 + "px")
-          .style('top', event.pageY + 20 + "px")
-          .html('Start Date: ' + that.dateToStr(new Date(d.startdate)) + '<br>'
-            + 'End Date: ' + that.dateToStr(new Date(d.enddate)) + '<br>'
-            + 'Total Fishing Hours: ' + Math.round(d.tfh * 100) / 100);
-      }
+    // displays tooltip when the moouse moves
+    function mousemove(event: PointerEvent, d: graphData) {
+      tooltip
+        .style('visibility', 'visible')
+        .style('left', event.pageX + 20 + "px")
+        .style('top', event.pageY + 20 + "px")
+        .html('Start Date: ' + that.dateToStr(new Date(d.startdate)) + '<br>'
+          + 'End Date: ' + that.dateToStr(new Date(d.enddate)) + '<br>'
+          + 'Total Fishing Hours: ' + Math.round(d.tfh * 100) / 100);
+    }
 
-      // removes tooltip 
-      function mouseleave() {
-        if (tooltip) tooltip.style('visibility', 'hidden');
-      }
-    })
+    // removes tooltip 
+    function mouseleave() {
+      if (tooltip) tooltip.style('visibility', 'hidden');
+    }
+
 
     function clicked(d: graphData) {
       that.startDate = that.dateToStr(new Date(d.startdate));
