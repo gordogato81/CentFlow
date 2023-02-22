@@ -11,8 +11,11 @@ app = Flask(__name__)
 CORS(app)
 
 table = 'test_table'
-
-
+host = "asdf"
+port = 5432
+user = "asdf"
+password = "asdf"
+db = "asdf"
 @app.route("/")
 def home():
     return "Hello, Flask!"
@@ -21,7 +24,7 @@ def home():
 @app.route('/getClusterDots', methods=["GET", "POST"])
 def getClusterDots():
     connection = psycopg2.connect(
-        host="charon04.inf.uni-konstanz.de", port=5432, dbname="fishingdb", user="wittekindt", password="HLFiqcjkJLOfcfOysnLR")
+        host=host, port=5432, dbname=db, user=user, password=password)
 
     start = request.args.get("start", "2020-01-01", type=str)
     end = request.args.get("end", "2020-01-05", type=str)
@@ -40,14 +43,13 @@ def getClusterDots():
         cursor.execute(query)
         results = cursor.fetchall()
 
-    # {"points": pixels}
     return jsonify(results), 200
 
 
 @app.route('/getCentroids', methods=['GET', 'POST'])
 def getCentroids():
-    connection = psycopg2.connect(host="charon04.inf.uni-konstanz.de", port=5432,
-                                  dbname="fishingdb", user="wittekindt", password="HLFiqcjkJLOfcfOysnLR")
+    connection = psycopg2.connect(host=host, port=5432,
+                                  dbname=db, user=user, password=password)
 
     start = request.args.get("start", "2020-01-01", type=str)
     end = request.args.get("end", "2020-12-31", type=str)
@@ -80,9 +82,8 @@ def getCentroids():
 
 @app.route('/getClusterGraph', methods=['GET', 'POST'])
 def getClusterGraph():
-    connection = psycopg2.connect(host="charon04.inf.uni-konstanz.de", port=5432,
-                                  dbname="fishingdb", user="wittekindt", password="HLFiqcjkJLOfcfOysnLR")
-
+    connection = psycopg2.connect(host=host, port=5432,
+                                  dbname=db, user=user, password=password)
     # start = request.args.get("start", "2020-01-01", type=str)
     # end = request.args.get("end", "2020-12-31", type=str)
     split = request.args.get("split", "week", type=str)
@@ -102,11 +103,11 @@ def getClusterGraph():
 
     return jsonify(results), 200
 
+
 @app.route('/getClusterHull', methods=['GET', 'POST'])
 def getClusterHull():
-    connection = psycopg2.connect(host="charon04.inf.uni-konstanz.de", port=5432,
-                                  dbname="fishingdb", user="wittekindt", password="HLFiqcjkJLOfcfOysnLR")
-
+    connection = psycopg2.connect(host=host, port=5432,
+                                  dbname=db, user=user, password=password)
     start1 = request.args.get("start1", "2019-12-30", type=str)
     end1 = request.args.get("end1", "2020-01-05", type=str)
     start2 = request.args.get("start2", "2020-01-13", type=str)
