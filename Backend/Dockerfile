@@ -12,7 +12,7 @@ RUN pip3 install Flask Flask-Cors
 RUN pip3 install psycopg2-binary
 RUN pip3 install OSMPythonTools
 
-ENV FLASK_APP server.py
+ENV FLASK_APP app.py
 ENV FLASK_DEBUG 1
 ENV FLASK_ENV development
 ENV FLASK_RUN_HOST 0.0.0.0

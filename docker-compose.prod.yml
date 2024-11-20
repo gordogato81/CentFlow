@@ -1,0 +1,50 @@
+# version: '3.7'
+services:
+  # database:
+  #   container_name: fish-database
+  #   build: ./database
+  #   restart: unless-stopped
+  #   volumes:
+  #     - database-data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - fish
+  #   env_file: ./secrets/.env
+
+  backend:
+    container_name: centflow-backend
+    build: 
+      context: ./backend/
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    ports:
+      - 5002:5000
+    volumes:
+      - ./backend/code:/var/opt/centflow
+      - ./backend/main.log:/var/opt/centflow/main.log
+    networks:
+      - fish
+    env_file: ./secrets/.env
+
+  frontend:
+    container_name: centflow-frontend
+    build: 
+      context: ./frontend/
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+     - 8889:80
+    #  - 443:443
+    #  - host:container
+    volumes:
+      - ./logs:/var/log/nginx
+    networks:
+      - fish
+      
+name: centflow
+networks:
+  fish:
+
+volumes:
+  database-data:

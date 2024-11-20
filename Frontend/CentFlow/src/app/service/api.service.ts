@@ -9,7 +9,7 @@ export class ApiService {
 
   constructor(private http: HttpClient) { }
 
-  private url = 'http://localhost:5000';
+  private url = 'http://localhost:5002';
 
   public getCentroids(split?: string, start?: string, end?: string): Observable<CentroidData[]> {
     if (start != undefined && end != undefined) {

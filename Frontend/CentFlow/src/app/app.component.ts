@@ -55,7 +55,8 @@ export class AppComponent implements OnInit {
       minZoom: 4,
       maxZoom: 14,
       wheelPxPerZoomLevel: 120,
-      maxBounds: bounds
+      worldCopyJump: true,
+      // maxBounds: bounds
     };
 
     this.map = L.map('map', mapOptions).setView([0, 80]); // defaults to world view 
@@ -108,7 +109,7 @@ export class AppComponent implements OnInit {
     dots.on('click', (event, d) => this.startDialog(d, cents))
       .on('pointermove', (event: any, d: any) => mousemove(event, d))
       .on('pointerout', mouseleave);
-    map.on('zoomend', zooming);
+    // map.on('zoomend', zooming);
     map.on('moveend', panning);
 
     function zooming() {
@@ -160,7 +161,7 @@ export class AppComponent implements OnInit {
         // this.draw(cdata);
         this.trajectories = this.aS.getTrajectories();
         this.renderer = this.aS.getRenderer();
-        if (this.trajectories != []) {
+        if (this.trajectories.length != 0) {
           this.renderer(this.trajectories);
         }
         dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
@@ -188,7 +189,7 @@ export class AppComponent implements OnInit {
         // this.draw(cdata);
         this.trajectories = this.aS.getTrajectories();
         this.renderer = this.aS.getRenderer();
-        if (this.trajectories != []) {
+        if (this.trajectories.length != 0) {
           this.renderer(this.trajectories);
         }
         dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
@@ -330,7 +331,7 @@ export class AppComponent implements OnInit {
   updateOnPan() {
     // this.trajectories = this.aS.getTrajectories();
     // this.renderer = this.aS.getRenderer()
-    if (this.trajectories != []) {
+    if (this.trajectories.length != 0) {
       this.renderer(this.trajectories);
     }
   }

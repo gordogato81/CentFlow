@@ -7,13 +7,15 @@ services:
   #     - database-data:/var/lib/postgresql/data
   #   ports:
   #     - "5432:5432"
+  #   env_file: ./secrets/.env
 
   backend:
     build: ./Backend
     ports:
-      - "5000:5000"
+      - "5002:5000"
     volumes:
       - ./Backend/code:/var/opt/centflow
+    env_file: ./secrets/.env
 
 volumes:
   database-data:
