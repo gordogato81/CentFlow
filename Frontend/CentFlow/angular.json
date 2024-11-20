@@ -78,10 +78,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "CentFlow:build:production"
+              "buildTarget": "CentFlow:build:production"
             },
             "development": {
-              "browserTarget": "CentFlow:build:development"
+              "buildTarget": "CentFlow:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -89,7 +89,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "CentFlow:build"
+            "buildTarget": "CentFlow:build"
           }
         },
         "test": {
