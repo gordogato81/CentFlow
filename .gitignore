@@ -1,0 +1,5 @@
+Backend/code/__pycache__/*
+logs/*
+secrets/*
+Backend/code/main.log
+Backend/main.log
