@@ -45,6 +45,7 @@ services:
 name: centflow
 networks:
   fish:
+    external: true
 
 volumes:
   database-data:
