@@ -9,7 +9,8 @@ export class ApiService {
 
   constructor(private http: HttpClient) { }
 
-  private url = 'http://localhost:5002';
+  // private url = 'http://localhost:5002';
+  private url = 'https://centflow.wittekindt.eu/api';
 
   public getCentroids(split?: string, start?: string, end?: string): Observable<CentroidData[]> {
     if (start != undefined && end != undefined) {

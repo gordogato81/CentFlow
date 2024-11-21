@@ -45,6 +45,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     const that = this;
+    this.showProgress();
     const blBounds = L.latLng(-70, -10),
       trBounds = L.latLng(30, 160),
       bounds = L.latLngBounds(blBounds, trBounds);
@@ -86,6 +87,7 @@ export class AppComponent implements OnInit {
     const end = '2020-07-31';
     this.range.setValue({ start: start, end: end });
     this.ds.getCentroids(this.intervalScale, start, end).subscribe((cents) => {
+      this.hideProgress();
       this.loaded = true;
       this.aS.setData(cents);
       this.dots(cents);
@@ -536,6 +538,9 @@ export class AppComponent implements OnInit {
   }
 
   onChange(event: any) {
+    const canvas = this.aS.getCanvas();
+    const context = canvas.node().getContext('2d');
+    this.showProgress();
     if (this.range.value.end) {
       const start = new Date(Date.parse(this.range.value.start));
       const end = new Date(Date.parse(this.range.value.end));
@@ -546,6 +551,8 @@ export class AppComponent implements OnInit {
           this.dateToStr(end)
         )
         .subscribe((cents) => {
+          this.hideProgress();
+          context.clearRect(0, 0, canvas.attr('width'), canvas.attr('height'));
           this.aS.setData(cents);
           this.dots(cents);
           // this.draw(cents);
@@ -565,6 +572,20 @@ export class AppComponent implements OnInit {
         rangeEnd: this.range.value.end,
       },
     });
+  }
+
+  showProgress() {
+    let element = document.getElementById('progress');
+    if (element != null) {
+      element.style.visibility = 'visible';
+    }
+  }
+
+  hideProgress() {
+    let element = document.getElementById('progress');
+    if (element != null) {
+      element.style.visibility = 'hidden';
+    }
   }
 
   dateToStr(d: Date) {

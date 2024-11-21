@@ -63,7 +63,7 @@ export class DialogComponent implements OnInit {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(this.map);
-    L.control.scale().setPosition('bottomleft').addTo(this.map);
+    L.control.scale().setPosition('topright').addTo(this.map);
     L.svg().addTo(this.map);
     L.canvas({ pane: 'shadowPane' }).addTo(this.map);
     this.diaS.setMap(this.map);
@@ -307,7 +307,7 @@ export class DialogComponent implements OnInit {
 
     this.map.on('zoomend, moveend', update);
     this.map.on('click', function (event: L.LeafletMouseEvent) {
-      console.log(event);
+      // console.log(event);
       const data = that.cData;
       // + 0.1 to the latitude to change raster position from top left to bottom left of each raster rectangle
       const lat = that.truncate(
@@ -323,8 +323,8 @@ export class DialogComponent implements OnInit {
           that.tooltipViz
             .style('z-index', 9999)
             .style('visibility', 'visible')
-            .style('left', event.originalEvent.pageX + 20 + 'px')
-            .style('top', event.originalEvent.pageY + 20 + 'px')
+            .style('left', event.originalEvent.pageX - 80 + 'px')
+            .style('top', event.originalEvent.pageY - 145 + 'px')
             .html(
               'Latitude: ' +
                 d.lat +
@@ -481,8 +481,8 @@ export class DialogComponent implements OnInit {
     function mousemove(event: PointerEvent, d: graphData) {
       tooltip
         .style('visibility', 'visible')
-        .style('left', event.pageX + 20 + 'px')
-        .style('top', event.pageY + 20 + 'px')
+        .style('left', event.pageX - 80 + 'px')
+        .style('top', event.pageY - 145 + 'px')
         .html(
           'Start Date: ' +
             that.dateToStr(new Date(d.startdate)) +
@@ -563,6 +563,12 @@ export class DialogComponent implements OnInit {
 
   onChangeChartScale(event: any) {
     this.drawGraph(this.data.d.cid, this.data.interval);
+  }
+
+  onWindowResize() {
+    console.log('here')
+    this.onChangeChartScale(null);
+    this.onChangeMapScale(null);
   }
 
   dateToStr(d: Date) {

@@ -17,6 +17,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 @NgModule({ declarations: [
         AppComponent,
@@ -34,7 +35,7 @@ import { MatButtonModule } from '@angular/material/button';
         ReactiveFormsModule,
         MatSelectModule,
         MatButtonModule,
-        // MatProgressBarModule,
+        MatProgressBarModule,
         // MatCheckboxModule,
         FormsModule], providers: [provideHttpClient(withInterceptorsFromDi())] })
 export class AppModule { }

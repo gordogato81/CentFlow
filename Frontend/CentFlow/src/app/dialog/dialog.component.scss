@@ -1,70 +1,150 @@
+// Base styles (desktop first)
 .dialog-content {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
+  width: 80vw;
+  height: 60vh;
 }
 
-.card-header {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  height: 20%;
-}
-.card-content {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  height: 80%;
-}
-#dMap {
-  width: 43vw;
-  height: 50vh;
-  display: inline-flex;
-  margin-left: 0.5vw;
-}
-
-#dChart {
-  width: 43vw;
-  height: 50vh;
-  display: inline-flex;
-  background-color: #F6F6F6;
-  margin-right: 0.5vw;
-}
-
-#dFilter {
-  display: block;
-  width: 85.3vw;
-  height: 10vh;
-  padding-bottom: 1vh;
-}
-
-.field {
-  margin-bottom: -1.25em;
-}
-
-#info {
-  display: block;
-  text-align: center;
-  // vertical-align: middle;
-  margin-left: 5vw;
-  margin-right: 5vw;
-  margin-bottom: 0vh;
-}
-
+// .card-header {
 #card {
-  display: ruby;
-  width: 95.3vw;
-  padding-bottom: 1%;
-  mat-form-field {
-    width: 15%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  width: 100%;
+  padding: 10px;
+
+  #info {
+    order: 2;
+    width: 100%;
+    padding: 5px;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #form-fields {
+    order: 1;
+    display: flex;
+    align-items: start;
+    flex-direction: row;
+    margin-top: auto;
+    margin-bottom: auto;
+    width: fit-content;
+    gap: 16px;
+
+    .field {
+      width: 200px;
+      margin-bottom: -0.625em;
+    }
+  }
+
+  #legend {
+    width: 100%;
+    max-width: 360px;
+    height: 60px;
+    order: 3;
+    margin: auto;
+    padding-top: 20px;
+  }
+}
+// }
+
+.content {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 16px;
+  height: 70%;
+
+  #dMap,
+  #dChart {
+    height: 100%;
+    width: calc(50% - 8px);
   }
 }
 
-#legend {
-  display: block;
-  height: 60px;
-  width: 360px;
-  // vertical-align: middle;
-  // background-color: gray;
+// Media Queries - From largest to smallest
+@media only screen and (max-width: 1600px) {
+  #form-fields {
+    flex-direction: column;
+    // align-items: center;
+    .field {
+      width: 200px;
+      margin-bottom: -1.625em;
+    }
+  }
+}
+
+@media only screen and (max-width: 1200px) {
+  #card {
+    align-items: center;
+    flex-direction: column;
+    #info {
+      order: 1;
+    }
+    #form-fields {
+      order: 2;
+      flex-direction: row;
+      justify-content: center;
+      .field {
+        width: 30%;
+        margin-bottom: -1.625em;
+      }
+    }
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  .dialog-content{
+    width: 70vw;
+    height: 80vh;
+  }
+  #card {
+    flex-direction: column;
+
+    #info {
+      text-align: center;
+      order: 1;
+    }
+
+    #form-fields {
+      flex-direction: column;
+      justify-content: center;
+      width: 100%;
+      order: 2;
+
+      .field {
+        width: 100%;
+        margin-bottom: -1.625em;
+      }
+    }
+
+    #legend {
+      order: 3;
+      width: 360px;
+      margin: 0;
+    }
+  }
+
+  .content {
+    flex-direction: column;
+    width: 100%;
+    // gap: 16px;
+    padding: 0%;
+    padding-bottom: 10px;
+
+    #dMap,
+    #dChart {
+      width: 100%;
+      height: 50vh;
+    }
+  }
+
+  .mat-mdc-dialog-content {
+    max-height: none !important;
+  }
 }

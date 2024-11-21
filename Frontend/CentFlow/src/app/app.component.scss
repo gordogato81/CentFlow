@@ -1,6 +1,30 @@
-#map {
+body {
+  margin: 0;
+  padding: 0;
   width: 100%;
+  height: 100%;
+}
+::ng-deep .mdc-linear-progress--indeterminate::after {
+  background-color: #FFA800;
+}
+
+::ng-deep mat-progress-bar .mdc-linear-progress--indeterminate {
+  background: #E4E8EB;
+}
+
+mat-progress-bar {
+  position: absolute;
+  top: 0;
+  z-index: 999; 
+}
+
+#map {
+  width: 100vw;
   height: 100vh;
+}
+
+#progress {
+  visibility: hidden;
 }
 
 mat-card {
@@ -28,4 +52,49 @@ h1 {
   font-weight: 500;
   font-size: xx-large;
   text-align: center;
+}
+
+@media only screen and (max-width: 1200px) {
+  // #map {
+  //   width: 100vw;
+  //   height: 100vh;
+  // }
+
+  mat-card {
+    right: 3%;
+    top: 2%;
+    width: 25%;
+  }
+}
+
+@media only screen and (max-width: 1000px) {
+  // #map {
+  //   width: 100vw;
+  //   height: 100vh;
+  // }
+
+  mat-card {
+    width: 35%;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  // #map {
+  //   width: 119vw;
+  //   height: 119vh;
+  // }
+
+  mat-card {
+    right: 2%;
+    top: 2%;
+    width: 45%;
+  }
+}
+
+@media only screen and (max-width: 600px) {
+  mat-card {
+    right: 2%;
+    top: 2%;
+    width: 55%;
+  }
 }
