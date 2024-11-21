@@ -1,0 +1,46 @@
+# Build Image
+FROM python:3.11-slim as Builder
+
+WORKDIR /usr/src/app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --upgrade pip && pip3 install --no-cache setuptools==70.0.0 Flask Flask-Cors gunicorn psycopg2 
+RUN pip freeze > requirements.txt \
+    && pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+
+# Production image 
+FROM python:3.11-slim
+
+ENV APP_DIR=/var/opt/fisheye
+RUN mkdir -p ${APP_DIR}
+WORKDIR ${APP_DIR}
+
+RUN apt-get update && apt-get install -y libpq-dev
+COPY --from=Builder /usr/src/app/wheels /wheels
+COPY --from=Builder /usr/src/app/requirements.txt ./
+RUN pip install --upgrade pip && pip install --no-cache /wheels/*
+
+ENV FLASK_APP app.py
+ENV FLASK_DEBUG 0
+ENV FLASK_ENV production
+
+EXPOSE 5000
+
+# create production user
+RUN groupadd -r prod && useradd -g prod prod
+
+# set ownership of workdir to user
+RUN chown -R prod:prod ${APP_DIR}
+
+# Switch to production user
+USER prod
+
+# ENTRYPOINT ["sh", "./entrypoint.sh" ]
+
+# Run gunicorn with some options
+# You can adjust the number of workers, timeout, log-level, etc. according to your needs
+# See https://docs.gunicorn.org/en/stable/settings.html for more details
+CMD ["gunicorn", "--workers=4", "--timeout=120", "--log-level=info", "--access-logfile", "main.log", "--bind", "0.0.0.0:5000", "app:app"]
