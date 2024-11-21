@@ -14,7 +14,7 @@ RUN pip freeze > requirements.txt \
 # Production image 
 FROM python:3.11-slim
 
-ENV APP_DIR=/var/opt/fisheye
+ENV APP_DIR=/var/opt/centflow
 RUN mkdir -p ${APP_DIR}
 WORKDIR ${APP_DIR}
 
