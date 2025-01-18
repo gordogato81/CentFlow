@@ -12,7 +12,7 @@ services:
   #     - fish
   #   env_file: ./secrets/.env
 
-  backend:
+  cent-backend:
     container_name: centflow-backend
     build:
       context: ./Backend/
@@ -24,10 +24,10 @@ services:
       - ./Backend/code:/var/opt/centflow
       - ./Backend/main.log:/var/opt/centflow/main.log
     networks:
-      - fish
+      - fisheye_fish
     env_file: ./secrets/.env
 
-  frontend:
+  cent-frontend:
     container_name: centflow-frontend
     build:
       context: ./Frontend/
@@ -40,11 +40,11 @@ services:
     volumes:
       - ./logs:/var/log/nginx
     networks:
-      - fish
+      - fisheye_fish
 
 name: centflow
 networks:
-  fish:
+  fisheye_fish:
     external: true
 
 volumes:
