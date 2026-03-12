@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { CUSTOM_ELEMENTS_SCHEMA, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -17,7 +17,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 @NgModule({ declarations: [
         AppComponent,
@@ -35,7 +34,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
         ReactiveFormsModule,
         MatSelectModule,
         MatButtonModule,
-        MatProgressBarModule,
         // MatCheckboxModule,
-        FormsModule], providers: [provideHttpClient(withInterceptorsFromDi())] })
+        FormsModule], providers: [provideHttpClient(withInterceptorsFromDi())], schemas: [CUSTOM_ELEMENTS_SCHEMA] })
 export class AppModule { }

@@ -1,9 +1,9 @@
 <div id="app">
-  <mat-progress-bar
-    mode="query"
-    id="progress"
-    class="progress"
-  ></mat-progress-bar>
+  @if (isLoading) {
+    <div class="loading-overlay" aria-busy="true" aria-live="polite" role="status">
+      <l-grid size="200" speed="1.1" color="#FFA800"></l-grid>
+    </div>
+  }
   <div id="tooltip"></div>
   <div id="map"></div>
   <mat-card id="filter">

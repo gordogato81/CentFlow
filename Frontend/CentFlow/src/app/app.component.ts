@@ -3,6 +3,8 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { AppService } from 'src/app/service/app.service';
 import { DialogComponent } from './dialog/dialog.component';
 import { MatDialog } from '@angular/material/dialog';
+import { finalize } from 'rxjs/operators';
+import { grid } from 'ldrs';
 
 import * as d3 from 'd3';
 import * as L from 'leaflet';
@@ -12,6 +14,7 @@ import { ApiService } from './service/api.service';
 import { CentroidData } from './interfaces';
 
 declare var renderQueue: any;
+grid.register();
 
 @Component({
     selector: 'app-root',
@@ -41,7 +44,7 @@ export class AppComponent implements OnInit {
     start: new FormControl(),
     end: new FormControl(),
   });
-  loaded = false;
+  isLoading = true;
   previousScale = this.intervalScale;
 
   ngOnInit() {
@@ -87,14 +90,15 @@ export class AppComponent implements OnInit {
     const start = '2020-01-01';
     const end = '2020-07-31';
     this.range.setValue({ start: start, end: end });
-    this.ds.getCentroids(this.intervalScale, start, end).subscribe((cents) => {
-      this.hideProgress();
-      this.loaded = true;
-      this.aS.setData(cents);
-      this.dots(cents);
-      // this.draw(cents);
-      this.createArrow(cents);
-    });
+    this.ds
+      .getCentroids(this.intervalScale, start, end)
+      .pipe(finalize(() => this.hideProgress()))
+      .subscribe((cents) => {
+        this.aS.setData(cents);
+        this.dots(cents);
+        // this.draw(cents);
+        this.createArrow(cents);
+      });
   }
 
   dots(cents: CentroidData[]) {
@@ -255,12 +259,14 @@ export class AppComponent implements OnInit {
       // this.intervalScale = 'month';
       const start = new Date(Date.parse(this.range.value.start));
       const end = new Date(Date.parse(this.range.value.end));
+      this.showProgress();
       this.ds
         .getCentroids(
           this.intervalScale,
           this.dateToStr(start),
           this.dateToStr(end)
         )
+        .pipe(finalize(() => this.hideProgress()))
         .subscribe((cents) => {
           const canvas = this.aS.getCanvas();
           const context = this.aS.getContext();
@@ -551,8 +557,8 @@ export class AppComponent implements OnInit {
           this.dateToStr(start),
           this.dateToStr(end)
         )
+        .pipe(finalize(() => this.hideProgress()))
         .subscribe((cents) => {
-          this.hideProgress();
           context.clearRect(0, 0, canvas.attr('width'), canvas.attr('height'));
           this.aS.setData(cents);
           this.dots(cents);
@@ -576,17 +582,11 @@ export class AppComponent implements OnInit {
   }
 
   showProgress() {
-    let element = document.getElementById('progress');
-    if (element != null) {
-      element.style.visibility = 'visible';
-    }
+    this.isLoading = true;
   }
 
   hideProgress() {
-    let element = document.getElementById('progress');
-    if (element != null) {
-      element.style.visibility = 'hidden';
-    }
+    this.isLoading = false;
   }
 
   dateToStr(d: Date) {
