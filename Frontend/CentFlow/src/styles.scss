@@ -37,25 +37,3 @@ $CentFlow-theme: mat.m2-define-light-theme((
 /* You can add global styles to this file, and also import other style files */
 // html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
-
-.maplibre-overlay-root {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.maplibre-overlay-canvas,
-.maplibre-overlay-svg {
-  position: absolute;
-  inset: 0;
-  display: block;
-}
-
-.maplibre-overlay-canvas {
-  pointer-events: none;
-}
-
-.maplibre-overlay-svg {
-  overflow: hidden;
-  pointer-events: auto;
-}

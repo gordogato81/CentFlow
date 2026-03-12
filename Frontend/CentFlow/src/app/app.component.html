@@ -53,16 +53,6 @@
             <mat-option value="log">Logarithmic Scaling</mat-option>
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="fill" class="field">
-          <mat-label>Select Renderer</mat-label>
-          <mat-select
-            [(value)]="renderMode"
-            (valueChange)="onRenderModeChange($event)"
-          >
-            <mat-option value="native-gpu">Native GPU</mat-option>
-            <mat-option value="legacy-overlay">Legacy Overlay</mat-option>
-          </mat-select>
-        </mat-form-field>
         <div class="card-footer">
           <span class="privacy-label">Site information</span>
           <a href="#" class="privacy-link" (click)="openPrivacyPolicy($event)"

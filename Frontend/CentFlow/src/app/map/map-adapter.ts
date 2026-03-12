@@ -55,9 +55,6 @@ const OSM_RASTER_STYLE = {
 
 export class MapAdapter {
   private readonly map: MapLibreMap;
-  private readonly overlayRoot: HTMLDivElement;
-  private readonly svgLayer: SVGSVGElement;
-  private readonly canvasLayer: HTMLCanvasElement;
   private isReady = false;
   private readonly pendingReadyCallbacks: Array<() => void> = [];
 
@@ -78,20 +75,6 @@ export class MapAdapter {
       new maplibregl.ScaleControl(),
       options.scaleControlPosition ?? 'bottom-left',
     );
-
-    this.overlayRoot = document.createElement('div');
-    this.overlayRoot.className = 'maplibre-overlay-root';
-
-    this.canvasLayer = document.createElement('canvas');
-    this.canvasLayer.className = 'maplibre-overlay-canvas';
-
-    this.svgLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    this.svgLayer.classList.add('maplibre-overlay-svg');
-
-    this.overlayRoot.append(this.canvasLayer, this.svgLayer);
-    this.map.getCanvasContainer().appendChild(this.overlayRoot);
-    this.syncOverlaySize();
-    this.map.on('resize', () => this.syncOverlaySize());
     this.map.on('load', () => {
       this.isReady = true;
       while (this.pendingReadyCallbacks.length > 0) {
@@ -103,14 +86,6 @@ export class MapAdapter {
 
   getMap() {
     return this.map;
-  }
-
-  getCanvasLayer() {
-    return this.canvasLayer;
-  }
-
-  getSvgLayer() {
-    return this.svgLayer;
   }
 
   withMapReady(callback: () => void) {
@@ -224,29 +199,6 @@ export class MapAdapter {
     });
   }
 
-  onViewChange(callback: () => void) {
-    const events: Array<'load' | 'move' | 'zoom' | 'resize'> = [
-      'load',
-      'move',
-      'zoom',
-      'resize',
-    ];
-
-    for (const eventName of events) {
-      this.map.on(eventName, callback);
-    }
-
-    if (this.map.loaded()) {
-      callback();
-    }
-
-    return () => {
-      for (const eventName of events) {
-        this.map.off(eventName, callback);
-      }
-    };
-  }
-
   onLayerEvent<TEvent extends 'click' | 'mousemove' | 'mouseleave'>(
     eventName: TEvent,
     layerId: string,
@@ -277,28 +229,6 @@ export class MapAdapter {
 
   resize() {
     this.map.resize();
-    this.syncOverlaySize();
-  }
-
-  syncOverlaySize() {
-    const width = this.map.getContainer().clientWidth;
-    const height = this.map.getContainer().clientHeight;
-
-    if (this.canvasLayer.width !== width || this.canvasLayer.height !== height) {
-      this.canvasLayer.width = width;
-      this.canvasLayer.height = height;
-      this.canvasLayer.style.width = `${width}px`;
-      this.canvasLayer.style.height = `${height}px`;
-    }
-
-    if (
-      this.svgLayer.getAttribute('width') !== `${width}` ||
-      this.svgLayer.getAttribute('height') !== `${height}`
-    ) {
-      this.svgLayer.setAttribute('width', `${width}`);
-      this.svgLayer.setAttribute('height', `${height}`);
-      this.svgLayer.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    }
   }
 
   destroy() {
