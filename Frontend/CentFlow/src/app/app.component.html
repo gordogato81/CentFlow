@@ -15,40 +15,44 @@
         [min]="minDate"
         [max]="maxDate"
         [rangePicker]="picker"
-      >
+        >
         <input matStartDate formControlName="start" placeholder="2020-01-01" />
         <input
           matEndDate
           formControlName="end"
           placeholder="2020-01-31"
           (dateChange)="onChange($event)"
-        />
-      </mat-date-range-input>
-      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-      <mat-date-range-picker #picker></mat-date-range-picker>
+          />
+        </mat-date-range-input>
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-date-range-picker #picker></mat-date-range-picker>
 
-      <mat-error *ngIf="range.controls['start'].hasError('matStartDateInvalid')"
-        >Invalid start date</mat-error
-      >
-      <mat-error *ngIf="range.controls['end'].hasError('matEndDateInvalid')"
-        >Invalid end date</mat-error
-      >
-    </mat-form-field>
-    <mat-form-field appearance="fill" class="field">
-      <mat-label>Select Time Interval Duration</mat-label>
-      <mat-select [(value)]="intervalScale" (valueChange)="onChange($event)">
-        <mat-option value="week">Week</mat-option>
-        <mat-option value="month">Month</mat-option>
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field appearance="fill" id="bottomField">
-      <mat-label>Select Scaling</mat-label>
-      <mat-select [(value)]="mapScale" (valueChange)="onChange($event)">
-        <mat-option value="linear">Linear Scaling</mat-option>
-        <mat-option value="sqrt">Square Root Scaling</mat-option>
-        <mat-option value="log">Logarithmic Scaling</mat-option>
-      </mat-select>
-    </mat-form-field>
-  </mat-card>
-</div>
-<router-outlet></router-outlet>
+        @if (range.controls['start'].hasError('matStartDateInvalid')) {
+          <mat-error
+            >Invalid start date</mat-error
+            >
+        }
+        @if (range.controls['end'].hasError('matEndDateInvalid')) {
+          <mat-error
+            >Invalid end date</mat-error
+            >
+          }
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="field">
+          <mat-label>Select Time Interval Duration</mat-label>
+          <mat-select [(value)]="intervalScale" (valueChange)="onChange($event)">
+            <mat-option value="week">Week</mat-option>
+            <mat-option value="month">Month</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="fill" id="bottomField">
+          <mat-label>Select Scaling</mat-label>
+          <mat-select [(value)]="mapScale" (valueChange)="onChange($event)">
+            <mat-option value="linear">Linear Scaling</mat-option>
+            <mat-option value="sqrt">Square Root Scaling</mat-option>
+            <mat-option value="log">Logarithmic Scaling</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </mat-card>
+    </div>
+    <router-outlet></router-outlet>
