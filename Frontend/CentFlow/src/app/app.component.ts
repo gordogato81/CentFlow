@@ -47,6 +47,32 @@ export class AppComponent implements OnInit {
   isLoading = true;
   previousScale = this.intervalScale;
 
+  private positionTooltip(
+    tooltip: any,
+    event: MouseEvent | PointerEvent,
+    offset = 20
+  ) {
+    const tooltipNode = tooltip.node() as HTMLElement | null;
+    const tooltipWidth = tooltipNode?.offsetWidth ?? 0;
+    const tooltipHeight = tooltipNode?.offsetHeight ?? 0;
+    const maxLeft = Math.max(window.innerWidth - tooltipWidth - 8, 8);
+    const maxTop = Math.max(window.innerHeight - tooltipHeight - 8, 8);
+    const preferredLeft = event.clientX + offset;
+    const preferredTop = event.clientY + offset;
+    const fallbackLeft = event.clientX - tooltipWidth - offset;
+    const fallbackTop = event.clientY - tooltipHeight - offset;
+    const left = Math.max(
+      8,
+      Math.min(preferredLeft <= maxLeft ? preferredLeft : fallbackLeft, maxLeft)
+    );
+    const top = Math.max(
+      8,
+      Math.min(preferredTop <= maxTop ? preferredTop : fallbackTop, maxTop)
+    );
+
+    tooltip.style('left', `${left}px`).style('top', `${top}px`);
+  }
+
   ngOnInit() {
     const that = this;
     this.showProgress();
@@ -140,7 +166,8 @@ export class AppComponent implements OnInit {
       .select('#tooltip')
       .attr('class', 'leaflet-interactive')
       .style('visibility', 'hidden')
-      .style('position', 'absolute')
+      .style('position', 'fixed')
+      .style('pointer-events', 'none')
       .style('background-color', 'white')
       .style('border', 'solid')
       .style('border-width', '1px')
@@ -152,10 +179,7 @@ export class AppComponent implements OnInit {
     // displays tooltip when the moouse moves
     function mousemove(event: PointerEvent, d: CentroidData) {
       dotTip
-        .style('position', 'absolute')
         .style('visibility', 'visible')
-        .style('left', event.pageX + 20 + 'px')
-        .style('top', event.pageY + 20 + 'px')
         .html(
           'CID: ' +
             d.cid +
@@ -169,6 +193,7 @@ export class AppComponent implements OnInit {
             'End Date: ' +
             that.dateToStr(new Date(d.enddate))
         );
+      that.positionTooltip(dotTip, event);
     }
 
     // removes tooltip
