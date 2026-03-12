@@ -17,10 +17,10 @@ declare var renderQueue: any;
 grid.register();
 
 @Component({
-    selector: 'app-root',
-    templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss'],
-    standalone: false
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss'],
+  standalone: false,
 })
 export class AppComponent implements OnInit {
   title = 'CentFlow';
@@ -28,7 +28,7 @@ export class AppComponent implements OnInit {
   constructor(
     private ds: ApiService,
     private aS: AppService,
-    public dialog: MatDialog
+    public dialog: MatDialog,
   ) {}
 
   private map!: L.Map;
@@ -50,7 +50,7 @@ export class AppComponent implements OnInit {
   private positionTooltip(
     tooltip: any,
     event: MouseEvent | PointerEvent,
-    offset = 20
+    offset = 20,
   ) {
     const tooltipNode = tooltip.node() as HTMLElement | null;
     const tooltipWidth = tooltipNode?.offsetWidth ?? 0;
@@ -63,11 +63,14 @@ export class AppComponent implements OnInit {
     const fallbackTop = event.clientY - tooltipHeight - offset;
     const left = Math.max(
       8,
-      Math.min(preferredLeft <= maxLeft ? preferredLeft : fallbackLeft, maxLeft)
+      Math.min(
+        preferredLeft <= maxLeft ? preferredLeft : fallbackLeft,
+        maxLeft,
+      ),
     );
     const top = Math.max(
       8,
-      Math.min(preferredTop <= maxTop ? preferredTop : fallbackTop, maxTop)
+      Math.min(preferredTop <= maxTop ? preferredTop : fallbackTop, maxTop),
     );
 
     tooltip.style('left', `${left}px`).style('top', `${top}px`);
@@ -191,7 +194,7 @@ export class AppComponent implements OnInit {
             that.dateToStr(new Date(d.startdate)) +
             '<br>' +
             'End Date: ' +
-            that.dateToStr(new Date(d.enddate))
+            that.dateToStr(new Date(d.enddate)),
         );
       that.positionTooltip(dotTip, event);
     }
@@ -204,105 +207,15 @@ export class AppComponent implements OnInit {
 
   updateOnZoom() {
     const map = this.aS.getMap();
-    // if (map.getZoom() < this.zoomThreshold) {
-    //   this.intervalScale = 'month';
-    //   // if (this.previousScale == 'month') {
-    //   //   // const cdata = this.aS.getData();
-    //   //   const dots = d3.selectAll('circle');
-    //   //   // this.draw(cdata);
-    //   //   this.trajectories = this.aS.getTrajectories();
-    //   //   this.renderer = this.aS.getRenderer();
-    //   //   if (this.trajectories.length != 0) {
-    //   //     this.renderer(this.trajectories);
-    //   //   }
-    //   //   dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
-    //   //     .attr("cy", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
-    //   // } else {
-    //   //   this.intervalScale = 'month';
-    //   //   const start = new Date(Date.parse(this.range.value.start));
-    //   //   const end = new Date(Date.parse(this.range.value.end));
-    //   //   this.ds.getCentroids(this.intervalScale, this.dateToStr(start), this.dateToStr(end)).subscribe(cents => {
-    //   //     const canvas = this.aS.getCanvas();
-    //   //     const context = this.aS.getContext();
-    //   //     context.clearRect(0, 0, canvas.width, canvas.height);
-    //   //     this.aS.setData(cents);
-    //   //     this.dots(cents);
-    //   //     // this.draw(cents);
-    //   //     this.createArrow(cents);
-    //   //     this.previousScale = 'month';
-    //   //   });
-
-    //   // }
-    // } else {
-    //   this.intervalScale = 'week';
-    //   // if (this.previousScale == 'week') {
-    //   //   // const cdata = this.aS.getData();
-    //   //   const dots = d3.selectAll('circle');
-    //   //   // this.draw(cdata);
-    //   //   this.trajectories = this.aS.getTrajectories();
-    //   //   this.renderer = this.aS.getRenderer();
-    //   //   if (this.trajectories.length != 0) {
-    //   //     this.renderer(this.trajectories);
-    //   //   }
-    //   //   dots.attr("cx", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
-    //   //     .attr("cy", (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
-    //   // } else {
-    //   //   this.intervalScale = 'week';
-    //   //   const start = new Date(Date.parse(this.range.value.start));
-    //   //   const end = new Date(Date.parse(this.range.value.end));
-    //   //   this.ds.getCentroids(this.intervalScale, this.dateToStr(start), this.dateToStr(end)).subscribe(cents => {
-    //   //     const canvas = this.aS.getCanvas();
-    //   //     const context = this.aS.getContext();
-    //   //     context.clearRect(0, 0, canvas.width, canvas.height);
-    //   //     this.aS.setData(cents);
-    //   //     this.dots(cents);
-    //   //     // this.draw(cents);
-    //   //     this.createArrow(cents);
-    //   //     this.previousScale = 'week';
-    //   //   });
-    //   // }
-    // }
-    if (this.intervalScale == 'month') {
-      // const cdata = this.aS.getData();
-      const dots = d3.selectAll('circle');
-      // this.draw(cdata);
-      this.trajectories = this.aS.getTrajectories();
-      this.renderer = this.aS.getRenderer();
-      if (this.trajectories.length != 0) {
-        this.renderer(this.trajectories);
-      }
-      dots
-        .attr(
-          'cx',
-          (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x
-        )
-        .attr(
-          'cy',
-          (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y
-        );
-    } else {
-      // this.intervalScale = 'month';
-      const start = new Date(Date.parse(this.range.value.start));
-      const end = new Date(Date.parse(this.range.value.end));
-      this.showProgress();
-      this.ds
-        .getCentroids(
-          this.intervalScale,
-          this.dateToStr(start),
-          this.dateToStr(end)
-        )
-        .pipe(finalize(() => this.hideProgress()))
-        .subscribe((cents) => {
-          const canvas = this.aS.getCanvas();
-          const context = this.aS.getContext();
-          context.clearRect(0, 0, canvas.width, canvas.height);
-          this.aS.setData(cents);
-          this.dots(cents);
-          // this.draw(cents);
-          this.createArrow(cents);
-          // this.previousScale = 'month';
-        });
+    const dots = d3.selectAll('circle');
+    this.trajectories = this.aS.getTrajectories();
+    this.renderer = this.aS.getRenderer();
+    if (this.trajectories.length != 0) {
+      this.renderer(this.trajectories);
     }
+    dots
+      .attr('cx', (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x)
+      .attr('cy', (d: any) => map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y);
   }
 
   createArrow(cents: CentroidData[]) {
@@ -340,7 +253,7 @@ export class AppComponent implements OnInit {
           if (i == 0) {
             // First point
             nP = map.latLngToLayerPoint(
-              L.latLng(traj[i + 1].lat, traj[i + 1].lon)
+              L.latLng(traj[i + 1].lat, traj[i + 1].lon),
             ); // Next point
             points = that.findPoints(traj[i].tfh, valExt, cP, undefined, nP);
             points.push(cP);
@@ -357,7 +270,7 @@ export class AppComponent implements OnInit {
           } else if (i == traj.length - 1) {
             // Last point
             pP = map.latLngToLayerPoint(
-              L.latLng(traj[i - 1].lat, traj[i - 1].lon)
+              L.latLng(traj[i - 1].lat, traj[i - 1].lon),
             ); // Previous point
             points = that.findPoints(traj[i].tfh, valExt, cP, pP, undefined);
             points.push(cP);
@@ -365,10 +278,10 @@ export class AppComponent implements OnInit {
             context.lineTo(points[0].x, points[0].y);
           } else {
             nP = map.latLngToLayerPoint(
-              L.latLng(traj[i + 1].lat, traj[i + 1].lon)
+              L.latLng(traj[i + 1].lat, traj[i + 1].lon),
             ); // Next point
             pP = map.latLngToLayerPoint(
-              L.latLng(traj[i - 1].lat, traj[i - 1].lon)
+              L.latLng(traj[i - 1].lat, traj[i - 1].lon),
             ); // Previous point
             points = that.findPoints(traj[i].tfh, valExt, cP, pP, nP); //[0, valExt[1]]
             points.push(cP);
@@ -414,7 +327,7 @@ export class AppComponent implements OnInit {
           valExt,
           L.point(fP.x, fP.y),
           L.point(pP.x, pP.y),
-          undefined
+          undefined,
         );
         const t1 = tP[0],
           t2 = tP[1];
@@ -462,7 +375,7 @@ export class AppComponent implements OnInit {
     ext: [number, number],
     p2: L.Point,
     p1?: L.Point,
-    p3?: L.Point
+    p3?: L.Point,
   ) {
     // the points we want to determine
     let dP1 = { x: 0, y: 0 },
@@ -580,7 +493,7 @@ export class AppComponent implements OnInit {
         .getCentroids(
           this.intervalScale,
           this.dateToStr(start),
-          this.dateToStr(end)
+          this.dateToStr(end),
         )
         .pipe(finalize(() => this.hideProgress()))
         .subscribe((cents) => {
