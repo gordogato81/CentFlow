@@ -281,7 +281,8 @@ export class DialogComponent implements OnInit {
         .attr('y', 18)
         .attr('width', legendwidth)
         .attr('height', legendheight)
-        .style('fill', 'url(#gradient)');
+        .style('fill', 'url(#gradient)')
+        .style('cursor', 'pointer'); 
       // .style('opacity', 0.9);
 
       this.legend
@@ -473,6 +474,7 @@ export class DialogComponent implements OnInit {
           return 'purple';
         }
       })
+      .style('cursor', 'pointer')
       .on('pointermove', (event, d) => mousemove(event, d))
       .on('pointerout', mouseleave)
       .on('click', (event, d) => clicked(d));
@@ -481,8 +483,8 @@ export class DialogComponent implements OnInit {
     function mousemove(event: PointerEvent, d: graphData) {
       tooltip
         .style('visibility', 'visible')
-        .style('left', event.pageX - 80 + 'px')
-        .style('top', event.pageY - 145 + 'px')
+        .style('left', event.clientX + 'px') // .pageX - 80
+        .style('top', event.clientY + 'px')  //.pageY - 145
         .html(
           'Start Date: ' +
             that.dateToStr(new Date(d.startdate)) +
