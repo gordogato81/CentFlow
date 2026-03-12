@@ -18,8 +18,8 @@ services:
       context: ./Backend/
       dockerfile: Dockerfile.prod
     restart: unless-stopped
-    ports:
-      - 5002:5000
+    expose:
+      - "5000"
     volumes:
       - ./Backend/code:/var/opt/centflow
       - ./Backend/main.log:/var/opt/centflow/main.log
@@ -33,19 +33,25 @@ services:
       context: ./Frontend/
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-     - 8889:80
-    #  - 443:443
-    #  - host:container
+    expose:
+      - "80"
+      - "443"
     volumes:
       - ./logs:/var/log/nginx
+      # Reused NPM-managed certificate material mounted read-only into the frontend.
+      - ${FRONTEND_TLS_CERT_PATH:?Set FRONTEND_TLS_CERT_PATH}:/etc/nginx/certs/fullchain.pem:ro
+      - ${FRONTEND_TLS_KEY_PATH:?Set FRONTEND_TLS_KEY_PATH}:/etc/nginx/certs/privkey.pem:ro
     networks:
       - fisheye_fish
+      - npm_proxy
 
 name: centflow
 networks:
   fisheye_fish:
     external: true
+  npm_proxy:
+    external: true
+    name: ${NPM_EXTERNAL_NETWORK:-npm_proxy}
 
 volumes:
   database-data:

@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CentroidData, clustData, graphData, hullData } from '../interfaces'
+import { environment } from '../../environments/environment';
+import { CentroidData, clustData, graphData, hullData } from '../interfaces';
 @Injectable({
   providedIn: 'root'
 })
@@ -9,34 +10,46 @@ export class ApiService {
 
   constructor(private http: HttpClient) { }
 
-  // private url = 'http://localhost:5002';
-  private url = 'https://centflow.wittekindt.eu/api';
+  private readonly url = environment.apiBaseUrl;
 
   public getCentroids(split?: string, start?: string, end?: string): Observable<CentroidData[]> {
+    let params = new HttpParams();
     if (start != undefined && end != undefined) {
-      return this.http.get<CentroidData[]>(this.url + '/getCentroids?start=' + start + '&end=' + end + '&split=' + split);
+      params = params.set('start', start).set('end', end);
+      if (split != undefined) {
+        params = params.set('split', split);
+      }
     }
-    return this.http.get<CentroidData[]>(this.url + '/getCentroids');
+    return this.http.get<CentroidData[]>(`${this.url}/getCentroids`, { params });
   }
 
   public getClusterGraph(cid: number, split?: string) {
+    let params = new HttpParams();
     if (cid != undefined && split != undefined) {
-      return this.http.get<graphData[]>(this.url + '/getClusterGraph?split=' + split + '&cid=' + cid);
+      params = params.set('split', split).set('cid', cid);
     }
-    return this.http.get<graphData[]>(this.url + '/getClusterGraph');
+    return this.http.get<graphData[]>(`${this.url}/getClusterGraph`, { params });
   }
 
   public getCluster(cid: number, start: string, end: string) {
+    let params = new HttpParams();
     if (start != undefined && end != undefined && cid != undefined) {
-      return this.http.get<clustData[]>(this.url + '/getClusterDots?start=' + start + '&end=' + end + '&cid=' + cid);
+      params = params.set('start', start).set('end', end).set('cid', cid);
     }
-    return this.http.get<clustData[]>(this.url + '/getClusterDots');
+    return this.http.get<clustData[]>(`${this.url}/getClusterDots`, { params });
   }
 
   public getClusterHulls(cid: number, start1: string, end1: string, start2: string, end2: string, split: string) {
+    let params = new HttpParams();
     if (split!= undefined && cid != undefined) {
-      return this.http.get<hullData[]>(this.url + '/getClusterHull?start1=' + start1 + '&end1=' + end1 + '&start2=' + start2 + '&end2=' + end2 + '&cid=' + cid + '&split=' + split);
+      params = params
+        .set('start1', start1)
+        .set('end1', end1)
+        .set('start2', start2)
+        .set('end2', end2)
+        .set('cid', cid)
+        .set('split', split);
     }
-    return this.http.get<hullData[]>(this.url + '/getClusterHull');
+    return this.http.get<hullData[]>(`${this.url}/getClusterHull`, { params });
   }
 }

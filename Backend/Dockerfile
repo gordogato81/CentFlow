@@ -4,13 +4,10 @@ ENV APP_DIR=/var/opt/centflow
 RUN mkdir -p ${APP_DIR}
 WORKDIR ${APP_DIR}
 
-RUN apt-get update
-RUN apt-get install -y build-essential
-
-RUN pip3 install --upgrade pip
-RUN pip3 install Flask Flask-Cors
-RUN pip3 install psycopg2-binary
-RUN pip3 install OSMPythonTools
+COPY requirements-prod.txt /tmp/requirements-prod.txt
+RUN pip3 install --upgrade pip \
+    && pip3 install --no-cache-dir -r /tmp/requirements-prod.txt \
+    && pip3 install --no-cache-dir OSMPythonTools
 
 ENV FLASK_APP app.py
 ENV FLASK_DEBUG 1

@@ -20,6 +20,7 @@ import { createMapAdapter, type MapAdapter } from './map/map-adapter';
 import { TrajectoryWebGLLayer } from './map/trajectory-webgl-layer';
 import { PrivacyPolicyDialogComponent } from './privacy-policy-dialog/privacy-policy-dialog.component';
 import { ApiService } from './service/api.service';
+import { renderTooltipLines } from './tooltip.util';
 
 grid.register();
 
@@ -214,19 +215,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         dotTip
           .style('visibility', 'visible')
-          .html(
-            'CID: ' +
-              feature.properties['cid'] +
-              '<br>' +
-              'Total Fishing Hours: ' +
-              Math.round(Number(feature.properties['tfh']) * 100) / 100 +
-              '<br>' +
-              'Start Date: ' +
-              this.dateToStr(new Date(String(feature.properties['startdate']))) +
-              '<br>' +
-              'End Date: ' +
-              this.dateToStr(new Date(String(feature.properties['enddate']))),
-          );
+        renderTooltipLines(dotTip.node() as HTMLElement | null, [
+          `CID: ${feature.properties['cid']}`,
+          `Total Fishing Hours: ${
+            Math.round(Number(feature.properties['tfh']) * 100) / 100
+          }`,
+          `Start Date: ${this.dateToStr(
+            new Date(String(feature.properties['startdate'])),
+          )}`,
+          `End Date: ${this.dateToStr(
+            new Date(String(feature.properties['enddate'])),
+          )}`,
+        ]);
         this.positionTooltip(dotTip, event.originalEvent as MouseEvent);
       }),
     );

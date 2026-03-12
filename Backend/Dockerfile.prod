@@ -3,25 +3,22 @@ FROM python:3.11-slim as Builder
 
 WORKDIR /usr/src/app
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-RUN pip3 install --upgrade pip && pip3 install --no-cache setuptools==70.0.0 Flask Flask-Cors gunicorn psycopg2 
-RUN pip freeze > requirements.txt \
-    && pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+COPY requirements-prod.txt ./
+RUN pip3 install --upgrade pip setuptools==70.0.0 wheel \
+    && pip3 wheel --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements-prod.txt
 
-# Production image 
+# Production image
 FROM python:3.11-slim
 
 ENV APP_DIR=/var/opt/centflow
 RUN mkdir -p ${APP_DIR}
 WORKDIR ${APP_DIR}
 
-RUN apt-get update && apt-get install -y libpq-dev
+COPY requirements-prod.txt ./
 COPY --from=Builder /usr/src/app/wheels /wheels
-COPY --from=Builder /usr/src/app/requirements.txt ./
-RUN pip install --upgrade pip && pip install --no-cache /wheels/*
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir --no-index --find-links=/wheels -r requirements-prod.txt \
+    && rm -rf /wheels
 
 ENV FLASK_APP app.py
 ENV FLASK_DEBUG 0

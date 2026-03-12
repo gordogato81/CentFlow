@@ -16,6 +16,7 @@ import {
   toHullFeatureCollection,
 } from '../map/map-geojson';
 import { createMapAdapter, type MapAdapter } from '../map/map-adapter';
+import { renderTooltipLines } from '../tooltip.util';
 
 const CLUSTER_SOURCE_ID = 'centflow-dialog-cluster-source';
 const CLUSTER_LAYER_ID = 'centflow-dialog-cluster-layer';
@@ -165,17 +166,14 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
     }
 
     this.tooltipViz
-      .style('visibility', 'visible')
-      .html(
-        'Latitude: ' +
-          feature.properties['lat'] +
-          '<br>' +
-          'Longitude: ' +
-          feature.properties['lon'] +
-          '<br>' +
-          'Fishing Hours: ' +
-          Math.round(Number(feature.properties['tfh']) * 100) / 100,
-      );
+      .style('visibility', 'visible');
+    renderTooltipLines(this.tooltipViz.node() as HTMLElement | null, [
+      `Latitude: ${feature.properties['lat']}`,
+      `Longitude: ${feature.properties['lon']}`,
+      `Fishing Hours: ${
+        Math.round(Number(feature.properties['tfh']) * 100) / 100
+      }`,
+    ]);
     this.positionTooltip(
       this.tooltipViz,
       this.dialogContentElement.nativeElement,
@@ -528,17 +526,12 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
       .style('cursor', 'pointer')
       .on('pointermove', (event: PointerEvent, d) => {
         tooltip
-          .style('visibility', 'visible')
-          .html(
-            'Start Date: ' +
-              this.dateToStr(new Date(d.startdate)) +
-              '<br>' +
-              'End Date: ' +
-              this.dateToStr(new Date(d.enddate)) +
-              '<br>' +
-              'Total Fishing Hours: ' +
-              Math.round(d.tfh * 100) / 100,
-          );
+          .style('visibility', 'visible');
+        renderTooltipLines(tooltip.node() as HTMLElement | null, [
+          `Start Date: ${this.dateToStr(new Date(d.startdate))}`,
+          `End Date: ${this.dateToStr(new Date(d.enddate))}`,
+          `Total Fishing Hours: ${Math.round(d.tfh * 100) / 100}`,
+        ]);
         this.positionTooltip(tooltip, graphContainer, event);
       })
       .on('pointerout', () => {
