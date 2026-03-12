@@ -1,38 +1,73 @@
-import { Component, OnInit, Inject } from '@angular/core';
-import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import {
-  CentroidData,
-  clustData,
-  DialogData,
-  graphData,
-  hullData,
-} from '../interfaces';
-import * as L from 'leaflet';
+  AfterViewInit,
+  Component,
+  ElementRef,
+  Inject,
+  OnDestroy,
+  ViewChild,
+} from '@angular/core';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import type { ExpressionSpecification } from '@maplibre/maplibre-gl-style-spec';
 import * as d3 from 'd3';
 import { ApiService } from '../service/api.service';
 import { DialogService } from '../service/dialog.service';
+import { DialogData, clustData, graphData, hullData } from '../interfaces';
+import { toClusterCellFeatureCollection, toHullFeatureCollection } from '../map/map-geojson';
+import { createMapAdapter, type MapAdapter } from '../map/map-adapter';
+import { DEFAULT_MAP_RENDER_MODE, type MapRenderMode } from '../map/render-mode';
 
-declare var renderQueue: any;
+const CLUSTER_SOURCE_ID = 'centflow-dialog-cluster-source';
+const CLUSTER_LAYER_ID = 'centflow-dialog-cluster-layer';
+const HULL_PREV_SOURCE_ID = 'centflow-dialog-hull-prev-source';
+const HULL_PREV_FILL_LAYER_ID = 'centflow-dialog-hull-prev-fill';
+const HULL_PREV_LINE_LAYER_ID = 'centflow-dialog-hull-prev-line';
+const HULL_NEXT_SOURCE_ID = 'centflow-dialog-hull-next-source';
+const HULL_NEXT_FILL_LAYER_ID = 'centflow-dialog-hull-next-fill';
+const HULL_NEXT_LINE_LAYER_ID = 'centflow-dialog-hull-next-line';
 
 @Component({
-    selector: 'app-dialog',
-    templateUrl: './dialog.component.html',
-    styleUrls: ['./dialog.component.scss'],
-    standalone: false
+  selector: 'app-dialog',
+  templateUrl: './dialog.component.html',
+  styleUrls: ['./dialog.component.scss'],
+  standalone: false,
 })
-export class DialogComponent implements OnInit {
+export class DialogComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('dialogMap', { static: true })
+  private readonly dialogMapElement!: ElementRef<HTMLDivElement>;
+
+  @ViewChild('dialogContent', { static: true })
+  private readonly dialogContentElement!: ElementRef<HTMLDivElement>;
+
+  @ViewChild('dialogChart', { static: true })
+  private readonly dialogChartElement!: ElementRef<HTMLDivElement>;
+
+  @ViewChild('legend', { static: true })
+  private readonly legendElement!: ElementRef<SVGSVGElement>;
+
+  @ViewChild('tooltipViz', { static: true })
+  private readonly tooltipElement!: ElementRef<HTMLDivElement>;
+
   constructor(
-    @Inject(MAT_DIALOG_DATA) public data: DialogData,
-    private ds: ApiService,
-    private diaS: DialogService
+    @Inject(MAT_DIALOG_DATA) public readonly data: DialogData,
+    private readonly ds: ApiService,
+    private readonly diaS: DialogService,
   ) {
     this.CID = this.data.d.cid;
     this.startDate = this.dateToStr(new Date(this.data.d.startdate));
     this.endDate = this.dateToStr(new Date(this.data.d.enddate));
     this.tfh = Math.round(this.data.d.tfh * 100) / 100;
+    this.renderMode = this.data.renderMode ?? DEFAULT_MAP_RENDER_MODE;
   }
 
-  map!: L.Map;
+  private map!: MapAdapter;
+  private overlaySvg!: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+  private hullLayer!: d3.Selection<SVGGElement, unknown, null, undefined>;
+  private previousHullPath: any;
+  private nextHullPath: any;
+  private hullPathGenerator: any;
+  private removeViewListener?: () => void;
+  private redrawFrameId: number | null = null;
+  private readonly renderMode: MapRenderMode;
   dIntervalScale = 'week';
   mapScaleDialog = 'log';
   chartScaleDialog = 'linear';
@@ -42,7 +77,7 @@ export class DialogComponent implements OnInit {
   renderer: any;
   tooltipViz: any;
   legend: any;
-  cData: any = undefined;
+  cData: clustData[] | undefined;
   CID: number;
   startDate: string;
   endDate: string;
@@ -53,7 +88,7 @@ export class DialogComponent implements OnInit {
     container: HTMLElement,
     event: MouseEvent | PointerEvent,
     offsetX = 16,
-    offsetY = 16
+    offsetY = 16,
   ) {
     const [pointerX, pointerY] = d3.pointer(event, container);
     const tooltipNode = tooltip.node() as HTMLElement | null;
@@ -67,53 +102,73 @@ export class DialogComponent implements OnInit {
     tooltip.style('left', `${left}px`).style('top', `${top}px`);
   }
 
-  ngOnInit(): void {
-    const that = this;
-    const mapOptions = {
-      zoom: 4,
-      zoomDelta: 0.5,
-      minZoom: 3,
-      maxZoom: 9,
-      wheelPxPerZoomLevel: 120,
-    };
-
-    this.map = L.map('dMap', mapOptions).setView([0, 80]); // defaults to world view
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 9,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(this.map);
-    L.control.scale().setPosition('topright').addTo(this.map);
-    L.svg().addTo(this.map);
-    L.canvas({ pane: 'shadowPane' }).addTo(this.map);
-    this.diaS.setMap(this.map);
-    this.canvas = d3.select(this.map.getPanes().shadowPane).select('canvas');
-    this.context = this.canvas.node().getContext('2d');
-    this.diaS.setCanvas(this.canvas);
-    this.diaS.setContext(this.context);
+  ngAfterViewInit(): void {
+    this.initializeMap();
+    this.initializeTooltip();
     this.dIntervalScale = this.data.interval;
+
     this.ds
       .getClusterGraph(this.data.d.cid, this.data.interval)
-      .subscribe((gdata: any) => {
+      .subscribe((gdata) => {
         this.diaS.setGData(gdata);
         this.drawGraph(this.data.d.cid, this.data.interval);
       });
+
     this.createCluster(
       this.data.d.cid,
       this.data.d.startdate,
-      this.data.d.enddate
+      this.data.d.enddate,
     );
     this.createHull(
       this.data.d.cid,
       this.data.interval,
       this.data.d.startdate,
-      this.data.d.enddate
+      this.data.d.enddate,
     );
 
-    // initalizing tooltip
+    requestAnimationFrame(() => this.map.resize());
+  }
+
+  ngOnDestroy() {
+    this.removeViewListener?.();
+    if (this.redrawFrameId !== null) {
+      cancelAnimationFrame(this.redrawFrameId);
+      this.redrawFrameId = null;
+    }
+    this.clearNativeLayers();
+    this.map?.destroy();
+  }
+
+  private initializeMap() {
+    this.map = createMapAdapter(this.dialogMapElement.nativeElement, {
+      center: { lat: 0, lon: 80 },
+      zoom: 4,
+      minZoom: 3,
+      maxZoom: 9,
+      scaleControlPosition: 'top-right',
+    });
+
+    this.canvas = d3.select(this.map.getCanvasLayer()).style('z-index', '300');
+    this.overlaySvg = d3.select(this.map.getSvgLayer()).style('z-index', '301');
+    this.hullLayer = this.overlaySvg.append('g');
+    this.context = this.canvas.node()?.getContext('2d');
+
+    this.diaS.setMap(this.map);
+    this.diaS.setCanvas(this.canvas);
+    this.diaS.setContext(this.context);
+
+    this.removeViewListener = this.map.onViewChange(() => {
+      if (this.renderMode === 'legacy-overlay') {
+        this.scheduleMapLayerRedraw();
+      }
+    });
+    this.map.getMap().on('click', (event) => this.handleMapClick(event));
+    this.setLegacyOverlayVisibility(this.renderMode === 'legacy-overlay');
+  }
+
+  private initializeTooltip() {
     this.tooltipViz = d3
-      .select('#tooltipViz')
-      .attr('class', 'leaflet-interactive')
+      .select(this.tooltipElement.nativeElement)
       .style('visibility', 'hidden')
       .style('position', 'absolute')
       .style('pointer-events', 'none')
@@ -122,26 +177,168 @@ export class DialogComponent implements OnInit {
       .style('border-width', '1px')
       .style('border-radius', '5px')
       .style('padding', '10px')
-      .style('opacity', 0.7)
-      .style('z-index', 9999);
+      .style('opacity', '0.7')
+      .style('z-index', '9999');
+  }
+
+  private setLegacyOverlayVisibility(isVisible: boolean) {
+    const display = isVisible ? 'block' : 'none';
+    this.canvas.style('display', display);
+    this.overlaySvg.style('display', display);
+  }
+
+  private redrawMapLayers() {
+    this.map.syncOverlaySize();
+    this.refreshHullPaths();
+    if (this.cData !== undefined && this.renderer) {
+      this.renderer(this.cData);
+    }
+  }
+
+  private scheduleMapLayerRedraw() {
+    if (this.redrawFrameId !== null) {
+      return;
+    }
+
+    this.redrawFrameId = requestAnimationFrame(() => {
+      this.redrawFrameId = null;
+      this.redrawMapLayers();
+    });
+  }
+
+  private getCellScreenRect(lat: number, lon: number) {
+    const zoom = Math.round(this.map.getMap().getZoom());
+    let startLatOffset = 0;
+
+    if (zoom === 2) {
+      startLatOffset = 0.01;
+    } else if (zoom === 3) {
+      startLatOffset = 0.03;
+    } else if (zoom === 4) {
+      startLatOffset = 0.025;
+    } else if (zoom === 5) {
+      startLatOffset = 0.017;
+    } else if (zoom === 6) {
+      startLatOffset = 0.005;
+    } else if (zoom === 7) {
+      startLatOffset = 0.002;
+    }
+
+    const topLeft = this.map.project(lat - startLatOffset, lon);
+    const bottomRight = this.map.project(lat + 0.1, lon + 0.1);
+
+    return {
+      x: topLeft.x,
+      y: topLeft.y,
+      width: Math.max(1, Math.abs(bottomRight.x - topLeft.x)),
+      height: Math.max(1, Math.abs(bottomRight.y - topLeft.y)),
+    };
+  }
+
+  private refreshHullPaths() {
+    if (this.hullPathGenerator === undefined) {
+      return;
+    }
+
+    if (this.previousHullPath) {
+      this.previousHullPath.attr('d', (d: hullData) =>
+        this.hullPathGenerator(JSON.parse(d.hull)),
+      );
+    }
+    if (this.nextHullPath) {
+      this.nextHullPath.attr('d', (d: hullData) =>
+        this.hullPathGenerator(JSON.parse(d.hull)),
+      );
+    }
+  }
+
+  private handleMapClick(event: any) {
+    if (this.renderMode === 'native-gpu') {
+      const feature = this.map.queryRenderedFeatures(
+        {
+          x: event.point.x,
+          y: event.point.y,
+        },
+        { layers: [CLUSTER_LAYER_ID] },
+      )[0];
+
+      if (!feature?.properties) {
+        this.tooltipViz.style('visibility', 'hidden');
+        return;
+      }
+
+      this.tooltipViz
+        .style('visibility', 'visible')
+        .html(
+          'Latitude: ' +
+            feature.properties['lat'] +
+            '<br>' +
+            'Longitude: ' +
+            feature.properties['lon'] +
+            '<br>' +
+            'Fishing Hours: ' +
+            Math.round(Number(feature.properties['tfh']) * 100) / 100,
+        );
+      this.positionTooltip(
+        this.tooltipViz,
+        this.dialogContentElement.nativeElement,
+        event.originalEvent as MouseEvent,
+      );
+      return;
+    }
+
+    const data = this.cData;
+    const lat = this.truncate(Math.round((event.lngLat.lat + 0.1) * 100) / 100);
+    const lng = this.truncate(event.lngLat.lng);
+
+    if (data === undefined) {
+      return;
+    }
+
+    const entry = data.find((d) => d.lat === lat && d.lon === lng);
+    if (entry === undefined) {
+      this.tooltipViz.style('visibility', 'hidden');
+      return;
+    }
+
+    this.tooltipViz
+      .style('visibility', 'visible')
+      .html(
+        'Latitude: ' +
+          entry.lat +
+          '<br>' +
+          'Longitude: ' +
+          entry.lon +
+          '<br>' +
+          'Fishing Hours: ' +
+          Math.round(entry.tfh * 100) / 100,
+      );
+    this.positionTooltip(
+      this.tooltipViz,
+      this.dialogContentElement.nativeElement,
+      event.originalEvent as MouseEvent,
+    );
   }
 
   createHull(cid: number, split: string, start: string, end: string) {
-    let start1: string, start2: string, end1: string, end2: string;
+    let start1: string;
+    let start2: string;
+    let end1: string;
+    let end2: string;
     const st = new Date(start);
     const en = new Date(end);
-    if (this.data.interval == 'week') {
+    if (this.data.interval === 'week') {
       start1 = this.dateToStr(
-        new Date(st.getFullYear(), st.getMonth(), st.getDate() - 7)
+        new Date(st.getFullYear(), st.getMonth(), st.getDate() - 7),
       );
       start2 = this.dateToStr(
-        new Date(st.getFullYear(), st.getMonth(), st.getDate() + 7)
+        new Date(st.getFullYear(), st.getMonth(), st.getDate() + 7),
       );
       end1 = this.dateToStr(
-        new Date(en.getFullYear(), en.getMonth(), en.getDate() - 7)
+        new Date(en.getFullYear(), en.getMonth(), en.getDate() - 7),
       );
       end2 = this.dateToStr(
-        new Date(en.getFullYear(), en.getMonth(), en.getDate() + 7)
+        new Date(en.getFullYear(), en.getMonth(), en.getDate() + 7),
       );
     } else {
       start1 = this.dateToStr(new Date(st.getFullYear(), st.getMonth() - 1, 1));
@@ -149,145 +346,211 @@ export class DialogComponent implements OnInit {
       end1 = this.dateToStr(new Date(en.getFullYear(), en.getMonth(), 0));
       end2 = this.dateToStr(new Date(en.getFullYear(), en.getMonth() + 2, 0));
     }
+
     this.ds
       .getClusterHulls(cid, start1, end1, start2, end2, split)
-      .subscribe((hulls: hullData[]) => {
-        if (hulls.length > 0) {
-          if (hulls.length > 1) {
-            this.drawHull(hulls, '');
+      .subscribe((hulls) => {
+        if (hulls.length === 0) {
+          if (this.renderMode === 'native-gpu') {
+            this.applyNativeHulls([], []);
           } else {
-            if (
-              new Date(hulls[0].startdate).getTime() ==
-              new Date(start1).getTime()
-            ) {
-              this.drawHull(hulls, 'nP');
-            } else {
-              this.drawHull(hulls, 'pP');
-            }
+            this.hullLayer.selectAll('*').remove();
+            this.previousHullPath = undefined;
+            this.nextHullPath = undefined;
           }
+          return;
+        }
+
+        let previousHull: hullData[] = [];
+        let nextHull: hullData[] = [];
+        if (hulls.length > 1) {
+          previousHull = [hulls[0]];
+          nextHull = [hulls[1]];
+        } else if (
+          new Date(hulls[0].startdate).getTime() === new Date(start1).getTime()
+        ) {
+          previousHull = [hulls[0]];
+        } else {
+          nextHull = [hulls[0]];
+        }
+
+        if (this.renderMode === 'native-gpu') {
+          this.applyNativeHulls(previousHull, nextHull);
+        } else {
+          this.drawHull(previousHull, nextHull);
         }
       });
   }
-  drawHull(hulls: hullData[], no: string) {
-    const map = this.diaS.getMap();
-    // Transforming svg locations to leaflet coordinates
+
+  private applyNativeHulls(previousHull: hullData[], nextHull: hullData[]) {
+    this.clearLegacyHulls();
+
+    this.map.addOrUpdateGeoJsonSource(
+      HULL_PREV_SOURCE_ID,
+      toHullFeatureCollection(previousHull),
+    );
+    this.map.addOrUpdateGeoJsonSource(
+      HULL_NEXT_SOURCE_ID,
+      toHullFeatureCollection(nextHull),
+    );
+
+    this.map.addLayer({
+      id: HULL_PREV_FILL_LAYER_ID,
+      type: 'fill',
+      source: HULL_PREV_SOURCE_ID,
+      paint: {
+        'fill-color': '#0000ff',
+        'fill-opacity': 0.15,
+      },
+    });
+    this.map.addLayer({
+      id: HULL_PREV_LINE_LAYER_ID,
+      type: 'line',
+      source: HULL_PREV_SOURCE_ID,
+      paint: {
+        'line-color': '#0000ff',
+        'line-opacity': 0.2,
+        'line-width': 1,
+      },
+    });
+    this.map.addLayer({
+      id: HULL_NEXT_FILL_LAYER_ID,
+      type: 'fill',
+      source: HULL_NEXT_SOURCE_ID,
+      paint: {
+        'fill-color': '#008000',
+        'fill-opacity': 0.15,
+      },
+    });
+    this.map.addLayer({
+      id: HULL_NEXT_LINE_LAYER_ID,
+      type: 'line',
+      source: HULL_NEXT_SOURCE_ID,
+      paint: {
+        'line-color': '#008000',
+        'line-opacity': 0.2,
+        'line-width': 1,
+      },
+    });
+  }
+
+  private clearLegacyHulls() {
+    this.hullLayer.selectAll('*').remove();
+    this.previousHullPath = undefined;
+    this.nextHullPath = undefined;
+  }
+
+  private drawHull(previousHull: hullData[], nextHull: hullData[]) {
+    const map = this.map;
     const transform = d3.geoTransform({
-      point: function (x, y) {
-        const point = map.latLngToLayerPoint([y, x]);
+      point: function (this: any, x, y) {
+        const point = map.project(y, x);
         this.stream.point(point.x, point.y);
       },
     });
-    let previousHull: hullData[] = [],
-      nextHull: hullData[] = [];
-    if (no == 'pP') {
-      nextHull = [hulls[0]];
-    } else if (no == 'nP') {
-      previousHull = [hulls[0]];
-    } else {
-      previousHull = [hulls[0]];
-      nextHull = [hulls[1]];
-    }
-    // const firstHull = [hulls[0]],
-    //   secondHull = [hulls[1]];
-    // Adding transformation to the path
-    const path = d3.geoPath().projection(transform);
-    const hullSVG = d3.select(map.getPanes().overlayPane).select('svg');
-    if (!hullSVG.selectAll('g').empty()) hullSVG.selectAll('g').remove(); //removes previous hull if it exists
-    let firstPath = hullSVG
+
+    this.hullPathGenerator = d3.geoPath().projection(transform);
+    this.hullLayer.selectAll('*').remove();
+
+    this.previousHullPath = this.hullLayer
       .append('g')
       .selectAll('path')
       .data(previousHull)
       .enter()
       .append('path')
-      .attr('d', (d: hullData) => path(JSON.parse(d.hull)))
-      .attr('class', 'leaflet-interactive')
+      .attr('d', (d: hullData) => this.hullPathGenerator(JSON.parse(d.hull)))
       .attr('pointer-events', 'painted')
       .style('fill', 'blue')
       .style('fill-opacity', 0.15)
       .attr('stroke', 'blue')
       .attr('stroke-opacity', 0.2);
 
-    let secondPath = hullSVG
+    this.nextHullPath = this.hullLayer
       .append('g')
       .selectAll('path')
       .data(nextHull)
       .enter()
       .append('path')
-      .attr('d', (d: hullData) => path(JSON.parse(d.hull)))
-      .attr('class', 'leaflet-interactive')
+      .attr('d', (d: hullData) => this.hullPathGenerator(JSON.parse(d.hull)))
       .attr('pointer-events', 'painted')
       .style('fill', 'green')
       .style('fill-opacity', 0.15)
       .attr('stroke', 'green')
       .attr('stroke-opacity', 0.2);
-
-    map.on('zoomend', update);
-
-    function update() {
-      firstPath.attr('d', (d: hullData) => path(JSON.parse(d.hull)));
-      secondPath.attr('d', (d: hullData) => path(JSON.parse(d.hull)));
-    }
   }
 
   createCluster(cid: number, start: string, end: string) {
-    const that = this;
-    const legendheight = 10;
-    const legendwidth = 345;
-    const contentContainer = document.getElementById('dialogContent')!;
+    const legendHeight = 10;
+    const legendWidth = 345;
+    this.legend = d3.select(this.legendElement.nativeElement);
 
-    this.legend = d3.select('#legend');
     let colorMap: any;
     let colorScale: any;
-    // determining the color scaling based on user input
-    if (that.mapScaleDialog == 'log') {
+    if (this.mapScaleDialog === 'log') {
       colorMap = d3.scaleSymlog<string, number>();
       colorScale = d3.scaleSymlog<string, number>();
-    } else if (that.mapScaleDialog == 'sqrt') {
+    } else if (this.mapScaleDialog === 'sqrt') {
       colorMap = d3.scaleSqrt();
       colorScale = d3.scaleSqrt();
-    } else if (that.mapScaleDialog == 'linear') {
+    } else {
       colorMap = d3.scaleLinear();
       colorScale = d3.scaleLinear();
     }
-    colorMap.domain([0, that.dMax]).range(['orange', 'purple']);
+    colorMap.domain([0, this.dMax]).range(['orange', 'purple']);
 
-    // >>> removing any previous legend DOM elements
-    if (!this.legend.selectAll('rect').empty())
-      this.legend.selectAll('rect').remove();
-    if (!this.legend.selectAll('g').empty())
-      this.legend.selectAll('g').remove();
-    if (!this.legend.selectAll('text').empty())
-      this.legend.selectAll('text').remove();
-    // <<<
+    const drawCell = (d: clustData) => {
+      const rect = this.getCellScreenRect(d.lat, d.lon);
+      this.context.beginPath();
+      this.context.fillStyle = colorMap(d.tfh);
+      this.context.rect(rect.x, rect.y, rect.width, rect.height);
+      this.context.fill();
+      this.context.closePath();
+    };
 
-    this.ds.getCluster(cid, start, end).subscribe((data: clustData[]) => {
-      this.cData = data;
-      this.dMax = d3.max(data, (d: clustData) => +d.tfh)!;
-      this.renderer = new renderQueue(draw).clear(clearContext);
-      this.renderer(this.cData);
-      // this.draw(data);
-
-      const latExt: any = d3.extent(data, (d: clustData) => +d.lat)!;
-      const lonExt: any = d3.extent(data, (d: clustData) => +d.lon)!;
-      const bounds = L.latLngBounds(
-        L.latLng(latExt[0], lonExt[0]),
-        L.latLng(latExt[1], lonExt[1])
+    const clearContext = () => {
+      this.context.clearRect(
+        0,
+        0,
+        this.canvas.node()?.width ?? 0,
+        this.canvas.node()?.height ?? 0,
       );
-      this.map.fitBounds(bounds);
-      colorScale.domain([0, this.dMax]).range([0, legendwidth - 1]);
-      colorMap.domain([0, that.dMax]).range(['orange', 'purple']);
+    };
+
+    const renderCellsSync = (data: clustData[]) => {
+      clearContext();
+      for (const cell of data) {
+        drawCell(cell);
+      }
+    };
+
+    this.legend.selectAll('*').remove();
+
+    this.ds.getCluster(cid, start, end).subscribe((data) => {
+      this.cData = data;
+      this.dMax = d3.max(data, (d) => +d.tfh) ?? 0;
+
+      if (this.renderMode === 'native-gpu') {
+        this.applyNativeCluster(data);
+      } else {
+        this.renderer = renderCellsSync;
+        this.renderer(this.cData);
+      }
+
+      this.map.fitBounds(data.map((d) => ({ lat: d.lat, lon: d.lon })));
+
+      colorScale.domain([0, this.dMax]).range([0, legendWidth - 1]);
+      colorMap.domain([0, this.dMax]).range(['orange', 'purple']);
 
       const coloraxis = d3.axisBottom(colorScale).ticks(5);
 
-      // >>> constructing legend
       this.legend
         .append('defs')
         .append('linearGradient')
         .attr('id', 'gradient')
         .attr('x1', '0%')
         .attr('y1', '0%')
-        .attr('x2', '100%') // horizontal gradient
-        .attr('y2', '0%') // vertical gradient
+        .attr('x2', '100%')
+        .attr('y2', '0%')
         .selectAll('stop')
         .data([
           { offset: '0%', color: 'orange' },
@@ -297,15 +560,14 @@ export class DialogComponent implements OnInit {
         .attr('offset', (d: any) => d.offset)
         .attr('stop-color', (d: any) => d.color);
 
-      const rect = this.legend
+      this.legend
         .append('rect')
         .attr('x', 10)
         .attr('y', 18)
-        .attr('width', legendwidth)
-        .attr('height', legendheight)
+        .attr('width', legendWidth)
+        .attr('height', legendHeight)
         .style('fill', 'url(#gradient)')
-        .style('cursor', 'pointer'); 
-      // .style('opacity', 0.9);
+        .style('cursor', 'pointer');
 
       this.legend
         .append('g')
@@ -321,93 +583,107 @@ export class DialogComponent implements OnInit {
         .append('text')
         .attr('x', 60)
         .attr('y', 13)
-        // .attr("transform", "rotate(90)")
         .text('Apparent Fishing Activity in Hours');
-      // <<<
 
-      update();
-    });
-
-    this.map.on('zoomend, moveend', update);
-    this.map.on('click', function (event: L.LeafletMouseEvent) {
-      // console.log(event);
-      const data = that.cData;
-      // + 0.1 to the latitude to change raster position from top left to bottom left of each raster rectangle
-      const lat = that.truncate(
-        Math.round((event.latlng.lat + 0.1) * 100) / 100
-      );
-      const lng = that.truncate(event.latlng.lng);
-
-      if (!(data === undefined)) {
-        const d: any = data.find(
-          (d: clustData) => d.lat == lat && d.lon == lng
-        );
-        if (!(d === undefined)) {
-          that.tooltipViz
-            .style('z-index', 9999)
-            .style('visibility', 'visible')
-            .html(
-              'Latitude: ' +
-                d.lat +
-                '<br>' +
-                'Longitude: ' +
-                d.lon +
-                '<br>' +
-                'Fishing Hours: ' +
-                Math.round(d.tfh * 100) / 100
-            );
-          that.positionTooltip(that.tooltipViz, contentContainer, event.originalEvent);
-        } else {
-          that.tooltipViz.style('visibility', 'hidden');
-        }
+      if (this.renderMode === 'legacy-overlay') {
+        this.scheduleMapLayerRedraw();
       }
     });
+  }
 
-    function draw(d: clustData) {
-      const newY = that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).y + 0.1;
-      const newX = that.map.latLngToLayerPoint(L.latLng(d.lat, d.lon)).x;
-      that.context.beginPath();
-      that.context.fillStyle = colorMap(d.tfh);
-      that.context.rect(newX, newY, that.detSize(d)[0], that.detSize(d)[1]);
-      that.context.fill();
-      that.context.closePath();
+  private applyNativeCluster(data: clustData[]) {
+    this.clearLegacyClusterCanvas();
+    this.map.addOrUpdateGeoJsonSource(
+      CLUSTER_SOURCE_ID,
+      toClusterCellFeatureCollection(data),
+    );
+    this.map.addLayer({
+      id: CLUSTER_LAYER_ID,
+      type: 'fill',
+      source: CLUSTER_SOURCE_ID,
+      paint: {
+        'fill-color': this.buildClusterColorExpression() as ExpressionSpecification,
+        'fill-opacity': 1,
+      },
+    });
+  }
+
+  private buildClusterColorExpression() {
+    const maxValue = Math.max(this.dMax, 1);
+
+    if (this.mapScaleDialog === 'log') {
+      return [
+        'interpolate',
+        ['linear'],
+        ['ln', ['+', ['get', 'tfh'], 1]],
+        0,
+        'orange',
+        Math.log(maxValue + 1),
+        'purple',
+      ];
     }
 
-    function clearContext() {
-      that.context.clearRect(
+    if (this.mapScaleDialog === 'sqrt') {
+      return [
+        'interpolate',
+        ['linear'],
+        ['sqrt', ['get', 'tfh']],
         0,
-        0,
-        that.canvas.attr('width'),
-        that.canvas.attr('height')
-      );
+        'orange',
+        Math.sqrt(maxValue),
+        'purple',
+      ];
     }
-    function update() {
-      if (that.cData != undefined) {
-        that.renderer(that.cData);
-      }
-    }
+
+    return [
+      'interpolate',
+      ['linear'],
+      ['get', 'tfh'],
+      0,
+      'orange',
+      maxValue,
+      'purple',
+    ];
+  }
+
+  private clearLegacyClusterCanvas() {
+    this.renderer = undefined;
+    this.context?.clearRect(
+      0,
+      0,
+      this.canvas.node()?.width ?? 0,
+      this.canvas.node()?.height ?? 0,
+    );
+  }
+
+  private clearNativeLayers() {
+    this.map?.removeLayer(CLUSTER_LAYER_ID);
+    this.map?.removeLayer(HULL_PREV_FILL_LAYER_ID);
+    this.map?.removeLayer(HULL_PREV_LINE_LAYER_ID);
+    this.map?.removeLayer(HULL_NEXT_FILL_LAYER_ID);
+    this.map?.removeLayer(HULL_NEXT_LINE_LAYER_ID);
+    this.map?.removeSource(CLUSTER_SOURCE_ID);
+    this.map?.removeSource(HULL_PREV_SOURCE_ID);
+    this.map?.removeSource(HULL_NEXT_SOURCE_ID);
   }
 
   drawGraph(cid: number, interval: string) {
-    const that = this;
-    if (!d3.select('#dChart').select('svg').empty())
-      d3.select('#dChart').select('svg').remove(); //removes previous chart if it exists
-    if (!d3.select('#graphtooltip').empty())
-      d3.select('#graphtooltip').remove(); //removes previous chart if it exists
+    if (!d3.select('#dChart').select('svg').empty()) {
+      d3.select('#dChart').select('svg').remove();
+    }
+    if (!d3.select('#graphtooltip').empty()) {
+      d3.select('#graphtooltip').remove();
+    }
 
-    const grata: graphData[] = this.diaS.getGData()!;
+    const grata: graphData[] = this.diaS.getGData() ?? [];
     const margin = { top: 30, right: 30, bottom: 60, left: 60 };
-    const graphContainer = document.getElementById('dChart')!;
-    const width = graphContainer.offsetWidth - margin.left - margin.right,
-      height = graphContainer.offsetHeight - margin.top - margin.bottom;
-    const cMax: number = d3.max(grata, (d: graphData) => +d.tfh)!;
-    let barDomain: string[] = [];
+    const graphContainer = this.dialogChartElement.nativeElement;
+    const width = graphContainer.offsetWidth - margin.left - margin.right;
+    const height = graphContainer.offsetHeight - margin.top - margin.bottom;
+    const cMax: number = d3.max(grata, (d) => +d.tfh) ?? 0;
 
-    grata.forEach((element: graphData) => {
-      barDomain.push(element.startdate);
-    });
     const svg = d3
-      .select('#dChart')
+      .select(graphContainer)
       .append('svg')
       .attr('width', width + margin.left + margin.right)
       .attr('height', height + margin.top + margin.bottom)
@@ -415,22 +691,21 @@ export class DialogComponent implements OnInit {
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
     const tooltip = d3
-      .select('#dChart')
+      .select(graphContainer)
       .append('div')
       .attr('id', 'graphtooltip')
       .style('position', 'absolute')
       .style('pointer-events', 'none')
-      .style('z-index', 9999)
+      .style('z-index', '9999')
       .style('visibility', 'hidden')
-      .style('opacity', 0.8)
+      .style('opacity', '0.8')
       .style('background-color', 'white')
       .style('border', 'solid')
       .style('border-width', '1px')
       .style('border-radius', '5px')
       .style('padding', '10px');
 
-    // X axis
-    let x = d3
+    const x = d3
       .scaleBand<string>()
       .range([0, width])
       .domain(grata.map((d) => this.dateToStr(new Date(d.startdate))))
@@ -444,154 +719,110 @@ export class DialogComponent implements OnInit {
       .attr('transform', 'translate(-10,0)rotate(-45)')
       .style('text-anchor', 'end');
 
-    // Add Y axis
     let y: any;
-    if (this.chartScaleDialog == 'log') {
+    if (this.chartScaleDialog === 'log') {
       y = d3.scaleSymlog();
-    } else if (this.chartScaleDialog == 'sqrt') {
+    } else if (this.chartScaleDialog === 'sqrt') {
       y = d3.scaleSqrt();
     } else {
       y = d3.scaleLinear();
     }
-
     y.domain([0, cMax]).range([height, 0]);
 
     svg.append('g').call(d3.axisLeft(y));
-    // Bars
-    let startPrev: String, startNext: String;
+
+    let startPrev: string;
+    let startNext: string;
     const st = new Date(this.startDate);
-    if (this.data.interval == 'week') {
+    if (interval === 'week') {
       startPrev = this.dateToStr(
-        new Date(st.getFullYear(), st.getMonth(), st.getDate() - 7)
+        new Date(st.getFullYear(), st.getMonth(), st.getDate() - 7),
       );
       startNext = this.dateToStr(
-        new Date(st.getFullYear(), st.getMonth(), st.getDate() + 7)
+        new Date(st.getFullYear(), st.getMonth(), st.getDate() + 7),
       );
     } else {
       startPrev = this.dateToStr(
-        new Date(st.getFullYear(), st.getMonth() - 1, 1)
+        new Date(st.getFullYear(), st.getMonth() - 1, 1),
       );
       startNext = this.dateToStr(
-        new Date(st.getFullYear(), st.getMonth() + 1, 1)
+        new Date(st.getFullYear(), st.getMonth() + 1, 1),
       );
     }
+
     svg
       .selectAll('mybar')
       .data(grata)
       .join('rect')
-      .attr('x', (d) => x(this.dateToStr(new Date(d.startdate)))!)
+      .attr('x', (d) => x(this.dateToStr(new Date(d.startdate))) ?? 0)
       .attr('y', (d) => y(d.tfh))
       .attr('width', x.bandwidth())
       .attr('height', (d) => height - y(d.tfh))
       .attr('fill', (d) => {
         const cDate = this.dateToStr(new Date(d.startdate));
-        // console.log(cDate)
-        if (cDate == this.dateToStr(new Date(this.startDate))) {
+        if (cDate === this.dateToStr(new Date(this.startDate))) {
           return 'grey';
-        } else if (cDate == startPrev) {
-          return 'blue';
-        } else if (cDate == startNext) {
-          return 'green';
-        } else {
-          return 'purple';
         }
+        if (cDate === startPrev) {
+          return 'blue';
+        }
+        if (cDate === startNext) {
+          return 'green';
+        }
+        return 'purple';
       })
       .style('cursor', 'pointer')
-      .on('pointermove', (event, d) => mousemove(event, d))
-      .on('pointerout', mouseleave)
-      .on('click', (event, d) => clicked(d));
+      .on('pointermove', (event: PointerEvent, d) => {
+        tooltip
+          .style('visibility', 'visible')
+          .html(
+            'Start Date: ' +
+              this.dateToStr(new Date(d.startdate)) +
+              '<br>' +
+              'End Date: ' +
+              this.dateToStr(new Date(d.enddate)) +
+              '<br>' +
+              'Total Fishing Hours: ' +
+              Math.round(d.tfh * 100) / 100,
+          );
+        this.positionTooltip(tooltip, graphContainer, event);
+      })
+      .on('pointerout', () => {
+        tooltip.style('visibility', 'hidden');
+      })
+      .on('click', (_, d) => {
+        this.startDate = this.dateToStr(new Date(d.startdate));
+        this.endDate = this.dateToStr(new Date(d.enddate));
+        this.tfh = Math.round(d.tfh * 100) / 100;
+        this.drawGraph(cid, this.dIntervalScale);
+        this.createCluster(cid, d.startdate, d.enddate);
+        this.createHull(this.data.d.cid, this.dIntervalScale, d.startdate, d.enddate);
+      });
+  }
 
-    // displays tooltip when the moouse moves
-    function mousemove(event: PointerEvent, d: graphData) {
-      tooltip
-        .style('visibility', 'visible')
-        .html(
-          'Start Date: ' +
-            that.dateToStr(new Date(d.startdate)) +
-            '<br>' +
-            'End Date: ' +
-            that.dateToStr(new Date(d.enddate)) +
-            '<br>' +
-            'Total Fishing Hours: ' +
-            Math.round(d.tfh * 100) / 100
-        );
-      that.positionTooltip(tooltip, graphContainer, event);
-    }
-
-    // removes tooltip
-    function mouseleave() {
-      if (tooltip) tooltip.style('visibility', 'hidden');
-    }
-
-    function clicked(d: graphData) {
-      that.startDate = that.dateToStr(new Date(d.startdate));
-      that.endDate = that.dateToStr(new Date(d.enddate));
-      that.tfh = Math.round(d.tfh * 100) / 100;
-      that.drawGraph(cid, that.dIntervalScale);
-      that.createCluster(cid, d.startdate, d.enddate);
-      that.createHull(
-        that.data.d.cid,
-        that.dIntervalScale,
-        d.startdate,
-        d.enddate
+  onChangeMapScale(_: unknown) {
+    if (this.renderMode === 'native-gpu' && this.cData !== undefined) {
+      this.map.setPaintProperty(
+        CLUSTER_LAYER_ID,
+        'fill-color',
+        this.buildClusterColorExpression() as ExpressionSpecification,
       );
-    }
-  }
-
-  detSize(d: any) {
-    const lat: number = parseFloat(d.lat);
-    const lon: number = parseFloat(d.lon);
-    const zoom = this.map.getZoom();
-    let first, second;
-    if (zoom == 2) {
-      first = L.latLng(lat - 0.01, lon); // -0.01 Removes horizontal streak artifact
-      second = L.latLng(lat + 0.1, lon + 0.1);
-    } else if (zoom == 3) {
-      first = L.latLng(lat - 0.03, lon); // -0.01 Removes horizontal streak artifact
-      second = L.latLng(lat + 0.1, lon + 0.1);
-    } else if (zoom == 4) {
-      first = L.latLng(lat - 0.025, lon); // -0.01 Removes horizontal streak artifact
-      second = L.latLng(lat + 0.1, lon + 0.1);
-    } else if (zoom == 5) {
-      first = L.latLng(lat - 0.017, lon); // -0.01 Removes horizontal streak artifact
-      second = L.latLng(lat + 0.1, lon + 0.1);
-    } else if (zoom == 6) {
-      first = L.latLng(lat - 0.005, lon); // -0.01 Removes horizontal streak artifact
-      second = L.latLng(lat + 0.1, lon + 0.1);
-    } else if (zoom == 7) {
-      first = L.latLng(lat - 0.002, lon);
-      second = L.latLng(lat + 0.1, lon + 0.1);
-    } else {
-      first = L.latLng(lat, lon); // -0.01 Removes horizontal streak artifact
-      second = L.latLng(lat + 0.1, lon + 0.1);
+      return;
     }
 
-    let diffX = Math.abs(
-      this.map.latLngToContainerPoint(first).x -
-        this.map.latLngToContainerPoint(second).x
-    );
-    let diffY = Math.abs(
-      this.map.latLngToContainerPoint(first).y -
-        this.map.latLngToContainerPoint(second).y
-    );
-    diffX = diffX < 1 ? 1 : diffX;
-    diffY = diffY < 1 ? 1 : diffY;
-    const size: [number, number] = [diffX, diffY];
-    return size;
-  }
-
-  onChangeMapScale(event: any) {
     this.createCluster(this.CID, this.startDate, this.endDate);
   }
 
-  onChangeChartScale(event: any) {
+  onChangeChartScale(_: unknown) {
     this.drawGraph(this.data.d.cid, this.data.interval);
   }
 
   onWindowResize() {
-    console.log('here')
+    this.map.resize();
     this.onChangeChartScale(null);
-    this.onChangeMapScale(null);
+    if (this.renderMode === 'legacy-overlay') {
+      this.onChangeMapScale(null);
+    }
   }
 
   dateToStr(d: Date) {
@@ -606,10 +837,8 @@ export class DialogComponent implements OnInit {
 
   truncate(x: number) {
     if (x < 0) {
-      x = Math.ceil((x - 0.1) * 10) / 10;
-    } else if (x >= 0) {
-      x = Math.floor(x * 10) / 10;
+      return Math.ceil((x - 0.1) * 10) / 10;
     }
-    return x;
+    return Math.floor(x * 10) / 10;
   }
 }

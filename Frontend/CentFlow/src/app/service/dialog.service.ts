@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import * as L from 'leaflet'; 
 import { graphData } from '../interfaces';
 @Injectable({
   providedIn: 'root'
@@ -10,7 +9,7 @@ export class DialogService {
 
   context: any;
   canvas: any;
-  map!: L.Map;
+  map: any;
   gData: graphData[] = [];
 
   public setContext(context: any) {
@@ -29,7 +28,7 @@ export class DialogService {
     return this.canvas;
   }
   
-  public setMap(map: L.Map) {
+  public setMap(map: any) {
     this.map = map;
   }
 

@@ -37,8 +37,11 @@
               "src/assets"
             ],
             "styles": [
-              "./node_modules/leaflet/dist/leaflet.css",
+              "./node_modules/maplibre-gl/dist/maplibre-gl.css",
               "src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "maplibre-gl"
             ],
             "scripts": [
               "src/assets/render-queue.js"
@@ -50,8 +53,8 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1500kb",
-                  "maximumError": "2mb"
+                  "maximumWarning": "2250kb",
+                  "maximumError": "2500kb"
                 },
                 {
                   "type": "anyComponentStyle",

@@ -1,9 +1,12 @@
+import type { MapRenderMode } from './map/render-mode';
+
 export interface DialogData {
   d: CentroidData,
   data: CentroidData[]
   interval: string,
   rangeStart: string,
-  rangeEnd: string
+  rangeEnd: string,
+  renderMode: MapRenderMode
 }
 
 export interface CentroidData {
