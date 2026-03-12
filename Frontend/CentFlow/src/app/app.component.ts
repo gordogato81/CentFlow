@@ -3,6 +3,7 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { AppService } from 'src/app/service/app.service';
 import { DialogComponent } from './dialog/dialog.component';
 import { MatDialog } from '@angular/material/dialog';
+import { PrivacyPolicyDialogComponent } from './privacy-policy-dialog/privacy-policy-dialog.component';
 import { finalize } from 'rxjs/operators';
 import { grid } from 'ldrs';
 
@@ -516,6 +517,15 @@ export class AppComponent implements OnInit {
         rangeStart: this.range.value.start,
         rangeEnd: this.range.value.end,
       },
+    });
+  }
+
+  openPrivacyPolicy(event?: Event) {
+    event?.preventDefault();
+    this.dialog.open(PrivacyPolicyDialogComponent, {
+      width: '420px',
+      maxWidth: '90vw',
+      autoFocus: false,
     });
   }
 

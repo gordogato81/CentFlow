@@ -32,10 +32,13 @@ mat-card {
   top: 4%;
   right: 2%;
   width: 15%;
+  box-sizing: border-box;
+  padding: 1rem;
 }
 
 mat-form-field {
   display: block;
+  width: 100%;
 }
 
 #bottomField {
@@ -44,6 +47,42 @@ mat-form-field {
 
 .field {
   margin-bottom: -0.625em;
+}
+
+.card-footer {
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgb(0 0 0 / 10%);
+}
+
+.privacy-label {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: rgb(0 0 0 / 55%);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.privacy-link {
+  display: inline-block;
+  color: rgb(0 0 0 / 68%);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.privacy-link:hover,
+.privacy-link:focus-visible {
+  color: #111;
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 0.15rem;
 }
 
 h1 {

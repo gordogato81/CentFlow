@@ -53,6 +53,12 @@
             <mat-option value="log">Logarithmic Scaling</mat-option>
           </mat-select>
         </mat-form-field>
+        <div class="card-footer">
+          <span class="privacy-label">Site information</span>
+          <a href="#" class="privacy-link" (click)="openPrivacyPolicy($event)"
+            >Privacy policy</a
+          >
+        </div>
       </mat-card>
     </div>
     <router-outlet></router-outlet>
