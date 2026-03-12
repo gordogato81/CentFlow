@@ -48,6 +48,25 @@ export class DialogComponent implements OnInit {
   endDate: string;
   tfh: number;
 
+  private positionTooltip(
+    tooltip: any,
+    container: HTMLElement,
+    event: MouseEvent | PointerEvent,
+    offsetX = 16,
+    offsetY = 16
+  ) {
+    const [pointerX, pointerY] = d3.pointer(event, container);
+    const tooltipNode = tooltip.node() as HTMLElement | null;
+    const tooltipWidth = tooltipNode?.offsetWidth ?? 0;
+    const tooltipHeight = tooltipNode?.offsetHeight ?? 0;
+    const maxLeft = Math.max(container.clientWidth - tooltipWidth - 8, 0);
+    const maxTop = Math.max(container.clientHeight - tooltipHeight - 8, 0);
+    const left = Math.max(0, Math.min(pointerX + offsetX, maxLeft));
+    const top = Math.max(0, Math.min(pointerY + offsetY, maxTop));
+
+    tooltip.style('left', `${left}px`).style('top', `${top}px`);
+  }
+
   ngOnInit(): void {
     const that = this;
     const mapOptions = {
@@ -97,6 +116,7 @@ export class DialogComponent implements OnInit {
       .attr('class', 'leaflet-interactive')
       .style('visibility', 'hidden')
       .style('position', 'absolute')
+      .style('pointer-events', 'none')
       .style('background-color', 'white')
       .style('border', 'solid')
       .style('border-width', '1px')
@@ -213,6 +233,7 @@ export class DialogComponent implements OnInit {
     const that = this;
     const legendheight = 10;
     const legendwidth = 345;
+    const contentContainer = document.getElementById('dialogContent')!;
 
     this.legend = d3.select('#legend');
     let colorMap: any;
@@ -325,8 +346,6 @@ export class DialogComponent implements OnInit {
           that.tooltipViz
             .style('z-index', 9999)
             .style('visibility', 'visible')
-            .style('left', event.originalEvent.pageX - 80 + 'px')
-            .style('top', event.originalEvent.pageY - 145 + 'px')
             .html(
               'Latitude: ' +
                 d.lat +
@@ -337,6 +356,7 @@ export class DialogComponent implements OnInit {
                 'Fishing Hours: ' +
                 Math.round(d.tfh * 100) / 100
             );
+          that.positionTooltip(that.tooltipViz, contentContainer, event.originalEvent);
         } else {
           that.tooltipViz.style('visibility', 'hidden');
         }
@@ -399,6 +419,7 @@ export class DialogComponent implements OnInit {
       .append('div')
       .attr('id', 'graphtooltip')
       .style('position', 'absolute')
+      .style('pointer-events', 'none')
       .style('z-index', 9999)
       .style('visibility', 'hidden')
       .style('opacity', 0.8)
@@ -484,8 +505,6 @@ export class DialogComponent implements OnInit {
     function mousemove(event: PointerEvent, d: graphData) {
       tooltip
         .style('visibility', 'visible')
-        .style('left', event.clientX + 'px') // .pageX - 80
-        .style('top', event.clientY + 'px')  //.pageY - 145
         .html(
           'Start Date: ' +
             that.dateToStr(new Date(d.startdate)) +
@@ -496,6 +515,7 @@ export class DialogComponent implements OnInit {
             'Total Fishing Hours: ' +
             Math.round(d.tfh * 100) / 100
         );
+      that.positionTooltip(tooltip, graphContainer, event);
     }
 
     // removes tooltip
