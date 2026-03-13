@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  HostListener,
   Inject,
   OnDestroy,
   ViewChild,
@@ -151,6 +152,87 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
       .style('z-index', '9999');
   }
 
+  private getLegendWidth() {
+    const svg = this.legendElement.nativeElement;
+    const blockWidth =
+      svg.parentElement?.clientWidth ?? svg.clientWidth ?? 360;
+
+    return Math.max(180, Math.min(345, blockWidth - 16));
+  }
+
+  private drawLegend() {
+    if (!this.legend || this.dMax <= 0) {
+      return;
+    }
+
+    const legendHeight = 10;
+    const legendOffsetX = 10;
+    const legendOffsetY = 10;
+    const axisOffsetY = legendOffsetY + legendHeight;
+    const tickCount = this.getLegendWidth() < 240 ? 3 : 5;
+    const legendWidth = this.getLegendWidth();
+    const totalWidth = legendWidth + legendOffsetX * 2;
+    const totalHeight = 52;
+
+    let colorScale: any;
+    if (this.mapScaleDialog === 'log') {
+      colorScale = d3.scaleSymlog<string, number>();
+    } else if (this.mapScaleDialog === 'sqrt') {
+      colorScale = d3.scaleSqrt();
+    } else {
+      colorScale = d3.scaleLinear();
+    }
+
+    colorScale.domain([0, this.dMax]).range([0, legendWidth - 1]);
+    const colorAxis = d3.axisBottom(colorScale).ticks(tickCount);
+
+    this.legend
+      .attr('viewBox', `0 0 ${totalWidth} ${totalHeight}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet');
+
+    this.legend.selectAll('*').remove();
+
+    this.legend
+      .append('defs')
+      .append('linearGradient')
+      .attr('id', 'gradient')
+      .attr('x1', '0%')
+      .attr('y1', '0%')
+      .attr('x2', '100%')
+      .attr('y2', '0%')
+      .selectAll('stop')
+      .data([
+        { offset: '0%', color: 'orange' },
+        { offset: '100%', color: 'purple' },
+      ])
+      .join('stop')
+      .attr('offset', (d: any) => d.offset)
+      .attr('stop-color', (d: any) => d.color);
+
+    this.legend
+      .append('rect')
+      .attr('x', legendOffsetX)
+      .attr('y', legendOffsetY)
+      .attr('width', legendWidth)
+      .attr('height', legendHeight)
+      .style('fill', 'url(#gradient)')
+      .style('cursor', 'pointer');
+
+    this.legend
+      .append('g')
+      .attr('id', 'legendAxis')
+      .attr('transform', `translate(${legendOffsetX}, ${axisOffsetY})`)
+      .call(colorAxis)
+      .call((g: any) => g.select('.domain').remove())
+      .call((g: any) =>
+        g
+          .selectAll('text')
+          .attr('transform', 'translate(-6,0)rotate(-40)')
+          .style('text-anchor', 'end')
+          .style('font-size', legendWidth < 240 ? '9px' : '10px'),
+      );
+  }
+
   private handleMapClick(event: any) {
     const feature = this.map.queryRenderedFeatures(
       {
@@ -284,20 +366,7 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
   }
 
   createCluster(cid: number, start: string, end: string) {
-    const legendHeight = 10;
-    const legendWidth = 345;
     this.legend = d3.select(this.legendElement.nativeElement);
-
-    let colorScale: any;
-    if (this.mapScaleDialog === 'log') {
-      colorScale = d3.scaleSymlog<string, number>();
-    } else if (this.mapScaleDialog === 'sqrt') {
-      colorScale = d3.scaleSqrt();
-    } else {
-      colorScale = d3.scaleLinear();
-    }
-
-    this.legend.selectAll('*').remove();
 
     this.ds.getCluster(cid, start, end).subscribe((data) => {
       this.cData = data;
@@ -305,52 +374,7 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
 
       this.applyNativeCluster(data);
       this.map.fitBounds(data.map((d) => ({ lat: d.lat, lon: d.lon })));
-
-      colorScale.domain([0, this.dMax]).range([0, legendWidth - 1]);
-
-      const coloraxis = d3.axisBottom(colorScale).ticks(5);
-
-      this.legend
-        .append('defs')
-        .append('linearGradient')
-        .attr('id', 'gradient')
-        .attr('x1', '0%')
-        .attr('y1', '0%')
-        .attr('x2', '100%')
-        .attr('y2', '0%')
-        .selectAll('stop')
-        .data([
-          { offset: '0%', color: 'orange' },
-          { offset: '100%', color: 'purple' },
-        ])
-        .join('stop')
-        .attr('offset', (d: any) => d.offset)
-        .attr('stop-color', (d: any) => d.color);
-
-      this.legend
-        .append('rect')
-        .attr('x', 10)
-        .attr('y', 18)
-        .attr('width', legendWidth)
-        .attr('height', legendHeight)
-        .style('fill', 'url(#gradient)')
-        .style('cursor', 'pointer');
-
-      this.legend
-        .append('g')
-        .attr('id', 'legendAxis')
-        .attr('transform', 'translate(10, 25)')
-        .call(coloraxis)
-        .call((g: any) => g.select('.domain').remove())
-        .selectAll('text')
-        .attr('transform', 'translate(-10,0)rotate(-45)')
-        .style('text-anchor', 'end');
-
-      this.legend
-        .append('text')
-        .attr('x', 60)
-        .attr('y', 13)
-        .text('Apparent Fishing Activity in Hours');
+      this.drawLegend();
     });
   }
 
@@ -558,15 +582,18 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
       'fill-color',
       this.buildClusterColorExpression() as ExpressionSpecification,
     );
+    this.drawLegend();
   }
 
   onChangeChartScale(_: unknown) {
     this.drawGraph(this.data.d.cid, this.data.interval);
   }
 
+  @HostListener('window:resize')
   onWindowResize() {
     this.map.resize();
     this.onChangeChartScale(null);
+    this.drawLegend();
   }
 
   dateToStr(d: Date) {

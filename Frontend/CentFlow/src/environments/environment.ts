@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  apiBaseUrl: 'http://localhost:5002',
+  // apiBaseUrl: 'http://localhost:5002',
+  apiBaseUrl: 'https://centflow.wittekindt.eu/api/',
 };
 
 /*

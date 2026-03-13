@@ -69,6 +69,9 @@ export class MapAdapter {
       dragRotate: false,
       pitchWithRotate: false,
       zoomSnap: options.zoomSnap,
+      canvasContextAttributes: {
+        antialias: true,
+      },
     });
 
     this.map.addControl(

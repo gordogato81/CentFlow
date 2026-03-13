@@ -197,17 +197,11 @@ function buildArrowGeometry(
       continue;
     }
 
-    const tfhValues = trajectory.map((point) => point.tfh);
-    const ext: [number, number] = [
-      Math.min(...tfhValues),
-      Math.max(...tfhValues),
-    ];
-    const widthScale = buildWidthScale(mode, ext, maxTrajWidth);
     const finalPoint = trajectory[trajectory.length - 1];
     const previousPoint = trajectory[trajectory.length - 2];
     const baseTip = toMercator(finalPoint.lon, finalPoint.lat);
     const basePrevious = toMercator(previousPoint.lon, previousPoint.lat);
-    const halfWidth = widthScale(ext[1]);
+    const halfWidth = maxTrajWidth;
 
     for (const worldOffset of WORLD_COPIES) {
       const tip = {
@@ -257,8 +251,9 @@ void main() {
   }
 
   vec2 normal = vec2(-direction.y, direction.x);
+  float lineHalfWidth = a_halfWidth * u_pixelRatio;
   vec2 pixelToNdc = vec2(2.0 / u_viewport.x, 2.0 / u_viewport.y);
-  vec2 offsetNdc = normal * a_side * a_halfWidth * pixelToNdc;
+  vec2 offsetNdc = normal * a_side * lineHalfWidth * pixelToNdc;
   gl_Position = currClip + vec4(offsetNdc * currClip.w, 0.0, 0.0);
 }
 `;
@@ -279,14 +274,15 @@ void main() {
   vec2 tipNdc = tipClip.xy / tipClip.w;
   vec2 direction = safeNormalize(tipNdc - prevNdc);
   vec2 normal = vec2(-direction.y, direction.x);
-  float headLength = max(a_halfWidth * 1.4, 6.0);
+  float lineHalfWidth = a_halfWidth * u_pixelRatio;
+  float headLength = max(lineHalfWidth * 1.4, 6.0 * u_pixelRatio);
   vec2 pixelToNdc = vec2(2.0 / u_viewport.x, 2.0 / u_viewport.y);
   vec2 offsetPx;
 
   if (a_role < 0.5) {
-    offsetPx = normal * a_halfWidth;
+    offsetPx = normal * lineHalfWidth;
   } else if (a_role < 1.5) {
-    offsetPx = -normal * a_halfWidth;
+    offsetPx = -normal * lineHalfWidth;
   } else {
     offsetPx = direction * headLength;
   }
@@ -307,6 +303,7 @@ in float a_halfWidth;
 
 uniform mat4 u_matrix;
 uniform vec2 u_viewport;
+uniform float u_pixelRatio;
 
 ${ribbonVertexBody}`;
   }
@@ -320,6 +317,7 @@ attribute float a_halfWidth;
 
 uniform mat4 u_matrix;
 uniform vec2 u_viewport;
+uniform float u_pixelRatio;
 
 ${ribbonVertexBody}`;
 }
@@ -334,6 +332,7 @@ in float a_role;
 
 uniform mat4 u_matrix;
 uniform vec2 u_viewport;
+uniform float u_pixelRatio;
 
 ${arrowVertexBody}`;
   }
@@ -346,6 +345,7 @@ attribute float a_role;
 
 uniform mat4 u_matrix;
 uniform vec2 u_viewport;
+uniform float u_pixelRatio;
 
 ${arrowVertexBody}`;
 }
@@ -397,6 +397,23 @@ export class TrajectoryWebGLLayer implements CustomLayerInterface {
 
   constructor(id: string) {
     this.id = id;
+  }
+
+  private getCanvasMetrics() {
+    const canvas = this.map?.getCanvas();
+    const width = canvas?.width ?? 1;
+    const height = canvas?.height ?? 1;
+    const clientWidth = canvas?.clientWidth ?? width;
+    const clientHeight = canvas?.clientHeight ?? height;
+
+    return {
+      width,
+      height,
+      pixelRatio:
+        clientWidth > 0 && clientHeight > 0
+          ? Math.max(width / clientWidth, height / clientHeight)
+          : 1,
+    };
   }
 
   setTrajectories(
@@ -471,9 +488,7 @@ export class TrajectoryWebGLLayer implements CustomLayerInterface {
       this.dirty = false;
     }
 
-    const viewport = this.map?.getCanvas();
-    const width = viewport?.width ?? 1;
-    const height = viewport?.height ?? 1;
+    const { width, height, pixelRatio } = this.getCanvasMetrics();
 
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(
@@ -521,6 +536,10 @@ export class TrajectoryWebGLLayer implements CustomLayerInterface {
         width,
         height,
       );
+      gl.uniform1f(
+        gl.getUniformLocation(this.ribbonProgram, 'u_pixelRatio'),
+        pixelRatio,
+      );
       gl.uniform4f(
         gl.getUniformLocation(this.ribbonProgram, 'u_color'),
         1,
@@ -565,6 +584,10 @@ export class TrajectoryWebGLLayer implements CustomLayerInterface {
         gl.getUniformLocation(this.arrowProgram, 'u_viewport'),
         width,
         height,
+      );
+      gl.uniform1f(
+        gl.getUniformLocation(this.arrowProgram, 'u_pixelRatio'),
+        pixelRatio,
       );
       gl.uniform4f(
         gl.getUniformLocation(this.arrowProgram, 'u_color'),
