@@ -1,0 +1,11 @@
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+overrides:
+  '@hono/node-server': 2.1.0
+  '@modelcontextprotocol/sdk': 1.30.0
+peerDependencyRules:
+  allowedVersions:
+    listr2: 10.2.2

@@ -1,14 +1,14 @@
 # Build Image
-FROM python:3.11-slim as Builder
+FROM python:3.13-slim as Builder
 
 WORKDIR /usr/src/app
 
 COPY requirements-prod.txt ./
-RUN pip3 install --upgrade pip setuptools==70.0.0 wheel \
+RUN pip3 install --upgrade pip setuptools==84.0.0 wheel \
     && pip3 wheel --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements-prod.txt
 
 # Production image
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 ENV APP_DIR=/var/opt/centflow
 RUN mkdir -p ${APP_DIR}

@@ -6,6 +6,7 @@ import {
   Inject,
   OnDestroy,
   ViewChild,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import type { ExpressionSpecification } from '@maplibre/maplibre-gl-style-spec';
@@ -32,6 +33,7 @@ const HULL_NEXT_LINE_LAYER_ID = 'centflow-dialog-hull-next-line';
   selector: 'app-dialog',
   templateUrl: './dialog.component.html',
   styleUrls: ['./dialog.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class DialogComponent implements AfterViewInit, OnDestroy {

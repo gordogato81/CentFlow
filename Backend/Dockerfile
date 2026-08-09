@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.13-slim
 
 ENV APP_DIR=/var/opt/centflow
 RUN mkdir -p ${APP_DIR}
@@ -7,7 +7,7 @@ WORKDIR ${APP_DIR}
 COPY requirements-prod.txt /tmp/requirements-prod.txt
 RUN pip3 install --upgrade pip \
     && pip3 install --no-cache-dir -r /tmp/requirements-prod.txt \
-    && pip3 install --no-cache-dir OSMPythonTools
+    && pip3 install --no-cache-dir OSMPythonTools==0.3.6
 
 ENV FLASK_APP app.py
 ENV FLASK_DEBUG 1

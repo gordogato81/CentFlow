@@ -3,3 +3,4 @@ logs/*
 secrets/*
 Backend/code/main.log
 Backend/main.log
+/.pnpm-store/

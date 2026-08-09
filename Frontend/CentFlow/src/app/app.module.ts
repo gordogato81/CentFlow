@@ -16,7 +16,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 
 @NgModule({ declarations: [
@@ -37,5 +37,5 @@ import { MatButtonModule } from '@angular/material/button';
         MatSelectModule,
         MatButtonModule,
         // MatCheckboxModule,
-        FormsModule], providers: [provideHttpClient(withInterceptorsFromDi())], schemas: [CUSTOM_ELEMENTS_SCHEMA] })
+        FormsModule], providers: [provideHttpClient(withXhr(), withInterceptorsFromDi())], schemas: [CUSTOM_ELEMENTS_SCHEMA] })
 export class AppModule { }

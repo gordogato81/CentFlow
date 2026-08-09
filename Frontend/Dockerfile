@@ -1,13 +1,15 @@
 FROM node:24-alpine AS build
 
+RUN corepack enable
+
 WORKDIR /app
 
-COPY ./CentFlow/package*.json ./CentFlow/
+COPY ./CentFlow/package.json ./CentFlow/pnpm-lock.yaml ./CentFlow/pnpm-workspace.yaml ./CentFlow/
 WORKDIR /app/CentFlow
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 COPY ./CentFlow/ ./
-RUN npm run build
+RUN pnpm run build
 
 FROM nginx:stable-alpine AS production
 
