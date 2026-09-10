@@ -20,9 +20,11 @@ services:
     restart: unless-stopped
     expose:
       - "5000"
-    volumes:
-      - ./Backend/code:/var/opt/centflow
-      - ./Backend/main.log:/var/opt/centflow/main.log
+    # Application code is baked into the image (see Backend/Dockerfile.prod), so
+    # nothing is bind-mounted over it here: the running container matches the
+    # image that was built and scanned, and it runs as the non-root "nobody"
+    # user, which a host-owned bind mount would break.
+    # Access logs go to stdout and are collected by the Docker logging driver.
     networks:
       - fisheye_fish
     env_file: ./secrets/.env

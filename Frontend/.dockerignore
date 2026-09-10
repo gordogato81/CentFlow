@@ -1,0 +1,27 @@
+# Keep the build context to the sources the image actually needs.
+#
+# This is not just an optimisation: without it, `COPY ./CentFlow/ ./` copies the
+# host's node_modules over the Linux node_modules that `pnpm install` just
+# created, which makes `pnpm run build` fail.
+#
+# node_modules alone is ~321 MB of a ~342 MB context, so ignoring it also removes
+# almost all of the context transfer on every build.
+
+# Dependency trees and build caches
+**/node_modules
+**/.pnpm-store
+**/.angular
+**/dist
+**/www
+
+# Version control and editor state
+**/.git
+**/.gitignore
+**/.vscode
+**/.editorconfig
+
+# Docs, tests and stray artifacts
+**/*.md
+**/coverage
+**/.DS_Store
+**/*.log

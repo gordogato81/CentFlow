@@ -1,43 +1,49 @@
-# Build Image
-FROM python:3.13-slim as Builder
+# ---- Build stage -------------------------------------------------------------
+# Wheels are built in the build stage and only the wheels are carried into the
+# runtime image, so no compiler toolchain or build headers reach production.
+FROM python:3.13-slim AS build
 
-WORKDIR /usr/src/app
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /build
 
 COPY requirements-prod.txt ./
-RUN pip3 install --upgrade pip setuptools==84.0.0 wheel \
-    && pip3 wheel --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements-prod.txt
 
-# Production image
-FROM python:3.13-slim
+# The cache mount persists downloaded artifacts between builds; --no-cache-dir
+# keeps them out of the layer. pip already ships current in the base image, so
+# upgrading it only added a network round trip.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip wheel --wheel-dir /wheels -r requirements-prod.txt
 
-ENV APP_DIR=/var/opt/centflow
-RUN mkdir -p ${APP_DIR}
+# ---- Runtime stage -----------------------------------------------------------
+FROM python:3.13-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    APP_DIR=/var/opt/centflow \
+    FLASK_APP=app.py \
+    FLASK_DEBUG=0 \
+    FLASK_ENV=production
+
 WORKDIR ${APP_DIR}
 
+COPY --from=build /wheels /wheels
 COPY requirements-prod.txt ./
-COPY --from=Builder /usr/src/app/wheels /wheels
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir --no-index --find-links=/wheels -r requirements-prod.txt \
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir --no-index --find-links=/wheels -r requirements-prod.txt \
     && rm -rf /wheels
 
-ENV FLASK_APP app.py
-ENV FLASK_DEBUG 0
-ENV FLASK_ENV production
+# Application code is baked in so the image is self-contained and immutable.
+COPY --chown=nobody:nogroup code/ ./
 
 EXPOSE 5000
 
-# create production user
-RUN groupadd -r prod && useradd -g prod prod
+# Drop privileges. The service is stateless and needs no writable path.
+USER nobody
 
-# set ownership of workdir to user
-RUN chown -R prod:prod ${APP_DIR}
-
-# Switch to production user
-USER prod
-
-# ENTRYPOINT ["sh", "./entrypoint.sh" ]
-
-# Run gunicorn with some options
-# You can adjust the number of workers, timeout, log-level, etc. according to your needs
-# See https://docs.gunicorn.org/en/stable/settings.html for more details
-CMD ["gunicorn", "--workers=4", "--timeout=120", "--log-level=info", "--access-logfile", "main.log", "--bind", "0.0.0.0:5000", "app:app"]
+# gunicorn runs as PID 1 and handles SIGTERM directly, so no shell wrapper.
+CMD ["gunicorn", "--workers=4", "--timeout=120", "--log-level=info", \
+     "--access-logfile=-", "--bind", "0.0.0.0:5000", "app:app"]

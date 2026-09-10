@@ -1,0 +1,14 @@
+# Keep the build context limited to what the backend image needs.
+# The backend context is already small; this mainly guards against __pycache__,
+# local logs and any stray .env file being baked into the image.
+
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.log
+**/.env
+**/.venv
+**/venv
+**/.pytest_cache
+**/.mypy_cache
+**/.DS_Store

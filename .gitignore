@@ -4,3 +4,7 @@ secrets/*
 Backend/code/main.log
 Backend/main.log
 /.pnpm-store/
+
+# Local deploy configuration. Docker Compose auto-loads this file from the
+# project directory; see .env.example for the expected keys.
+.env
