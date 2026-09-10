@@ -1,9 +1,10 @@
-import maplibregl, {
+import {
+  Map as MapLibreMap,
+  ScaleControl,
   type ControlPosition,
   type CustomLayerInterface,
   type GeoJSONSource,
   type LayerSpecification,
-  type Map as MapLibreMap,
   type MapGeoJSONFeature,
   type MapLayerMouseEvent,
   type MapMouseEvent,
@@ -59,7 +60,7 @@ export class MapAdapter {
   private readonly pendingReadyCallbacks: Array<() => void> = [];
 
   constructor(container: HTMLElement, options: MapAdapterOptions) {
-    this.map = new maplibregl.Map({
+    this.map = new MapLibreMap({
       container,
       style: OSM_RASTER_STYLE as never,
       center: [options.center.lon, options.center.lat],
@@ -75,7 +76,7 @@ export class MapAdapter {
     });
 
     this.map.addControl(
-      new maplibregl.ScaleControl(),
+      new ScaleControl(),
       options.scaleControlPosition ?? 'bottom-left',
     );
     this.map.on('load', () => {
@@ -194,7 +195,16 @@ export class MapAdapter {
     this.removeLayer(id);
   }
 
-  setPaintProperty(layerId: string, property: string, value: unknown) {
+  /**
+   * Parameter type is derived from maplibre-gl so that the adapter keeps
+   * accepting exactly what `Map.setPaintProperty` accepts. maplibre-gl v6
+   * narrowed this from `string` to `keyof AllPaintProperties`.
+   */
+  setPaintProperty(
+    layerId: string,
+    property: Parameters<MapLibreMap['setPaintProperty']>[1],
+    value: unknown,
+  ) {
     this.withMapReady(() => {
       if (this.map.getLayer(layerId)) {
         this.map.setPaintProperty(layerId, property, value as never);

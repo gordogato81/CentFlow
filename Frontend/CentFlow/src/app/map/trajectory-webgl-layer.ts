@@ -1,4 +1,5 @@
-import maplibregl, {
+import {
+  MercatorCoordinate,
   type CustomLayerInterface,
   type CustomRenderMethodInput,
   type Map as MapLibreMap,
@@ -80,7 +81,7 @@ function isWebGL2(gl: GL): gl is WebGL2RenderingContext {
 }
 
 function toMercator(lon: number, lat: number) {
-  const coord = maplibregl.MercatorCoordinate.fromLngLat({ lng: lon, lat });
+  const coord = MercatorCoordinate.fromLngLat({ lng: lon, lat });
   return { x: coord.x, y: coord.y };
 }
 
