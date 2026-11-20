@@ -3,29 +3,17 @@ allowBuilds:
   esbuild: true
   lmdb: true
   msgpackr-extract: true
-minimumReleaseAgeExclude:
-  - '@angular/animations@22.1.6'
-  - '@angular/common@22.1.6'
-  - '@angular/compiler-cli@22.1.6'
-  - '@angular/compiler@22.1.6'
-  - '@angular/core@22.1.6'
-  - '@angular/forms@22.1.6'
-  - '@angular/platform-browser-dynamic@22.1.6'
-  - '@angular/platform-browser@22.1.6'
-  - '@angular/router@22.1.6'
 overrides:
-  '@hono/node-server': 2.1.0
-  '@modelcontextprotocol/sdk': 1.30.0
-  # Security pins for transitive advisories. These packages are pulled in only
-  # through build/test tooling, but are pinned here to keep `pnpm audit` clean.
-  #   6.16.0 fixes GHSA-4mjr-xmp4-gh2g and GHSA-x5fp-wj9c-mxmx
-  #   3.1.6 fixes GHSA-5jgf-p345-68v8, GHSA-f65p-4m7j-42xc,
-  #         GHSA-fph4-wmhf-6fwf and GHSA-jqff-g426-hqxp
-  #   4.13.5 fixes GHSA-gqvv-2mrq-wpjv, GHSA-g6gw-c38x-mqfc and
-  #          GHSA-crvj-82cr-hjcx
-  fast-uri: 3.1.6
-  hono: 4.13.7
-  qs: 6.16.0
+  # Security fixes for transitive dependencies reported by pnpm audit.
+  'body-parser@1': 1.20.9
+  'brace-expansion@1': 1.1.21
+  'engine.io@6': 6.6.10
+  'fast-uri@3': 3.1.9
+  'follow-redirects@1': 1.16.2
+  'piscina@5': 5.3.2
+  'qs@6': 6.16.1
+  'source-map-js@1': 1.2.2
+  'zod@4': 4.6.7
 peerDependencyRules:
   allowedVersions:
     listr2: 10.2.2

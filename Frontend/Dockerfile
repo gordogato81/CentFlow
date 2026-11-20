@@ -32,7 +32,7 @@ RUN pnpm run build
 # Both service ports are above the unprivileged threshold on the target host
 # (net.ipv4.ip_unprivileged_port_start=0). If that is ever raised, map the
 # listeners to 8080/8443 instead.
-FROM nginxinc/nginx-unprivileged:stable-alpine AS runtime
+FROM ghcr.io/nginx/nginx-unprivileged:1.30.7-alpine@sha256:0c53a1f2890c3526bfd201440f0fd3970e5b78f80630f58284aad0d34b5ec7bd AS runtime
 
 COPY --from=build /app/CentFlow/dist/cent-flow/browser/ /usr/share/nginx/html/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
