@@ -1,6 +1,7 @@
 import {
   Map as MapLibreMap,
   ScaleControl,
+  setWorkerUrl,
   type ControlPosition,
   type CustomLayerInterface,
   type GeoJSONSource,
@@ -10,6 +11,9 @@ import {
   type MapMouseEvent,
   type QueryRenderedFeaturesOptions,
 } from 'maplibre-gl';
+
+// Angular bundles the main module, so MapLibre needs the separate worker's URL.
+setWorkerUrl(new URL('assets/maplibre/maplibre-gl-worker.mjs', document.baseURI).href);
 
 export interface GeoPoint {
   lat: number;
